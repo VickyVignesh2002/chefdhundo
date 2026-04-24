@@ -38,6 +38,14 @@ export async function GET(request: Request) {
     
     if (error) {
       console.error('Error fetching announcements:', error);
+
+      if (activeOnly) {
+        return NextResponse.json(
+          { success: true, data: [] },
+          { status: 200 }
+        );
+      }
+
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 400 }

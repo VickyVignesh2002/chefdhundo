@@ -64,6 +64,8 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const enableVercelAnalytics = process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTICS === "true";
+
   // Hardcoded Clerk publishable key for build
   //const publishableKey = 'pk_live_Y2xlcmsuY2hlZmRodW5kby5jb20k';
   const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
@@ -120,7 +122,7 @@ export default async function RootLayout({
             </Suspense>
             <main className="min-h-screen pt-16">
               {children}
-              <Analytics />
+              {enableVercelAnalytics && <Analytics />}
             </main>
             <Suspense fallback={<FooterSkeleton />}>
               <Footer />

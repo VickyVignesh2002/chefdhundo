@@ -9,6 +9,12 @@ import {
 import type { UserUpdate } from '@/types/supabase'
 import { ClerkUserData } from '@/types/supabase'
 
+function isMissingUsersTableError(error: string | undefined): boolean {
+  if (!error) return false
+  const normalized = error.toLowerCase()
+  return normalized.includes("could not find the table 'public.users'")
+}
+
 // GET /api/user-supabase?clerk_id=xxx
 export async function GET(request: NextRequest) {
   try {
@@ -25,6 +31,18 @@ export async function GET(request: NextRequest) {
     const result = await getUserByClerkId(clerkId)
     
     if (!result.success) {
+      if (isMissingUsersTableError(result.error)) {
+        return NextResponse.json(
+          {
+            success: true,
+            data: null,
+            schemaReady: false,
+            message: 'Users table is not initialized in Supabase yet',
+          },
+          { status: 200 }
+        )
+      }
+
       // Return 200 with success: false for "user not found" cases
       // This allows the frontend to handle it gracefully
       return NextResponse.json(
@@ -70,6 +88,17 @@ export async function POST(request: NextRequest) {
 
     if (!result.success) {
       const errorMessage = result.error || 'Failed to create user'
+
+      if (isMissingUsersTableError(errorMessage)) {
+        return NextResponse.json(
+          {
+            success: false,
+            schemaReady: false,
+            error: 'Users table is not initialized in Supabase yet',
+          },
+          { status: 503 }
+        )
+      }
 
       if (errorMessage.includes('users_email_key')) {
         const existingUser = await getUserByEmail(email)
@@ -151,6 +180,17 @@ export async function PUT(request: NextRequest) {
     const result = await updateUser(clerk_user_id, updates)
     
     if (!result.success) {
+      if (isMissingUsersTableError(result.error)) {
+        return NextResponse.json(
+          {
+            success: false,
+            schemaReady: false,
+            error: 'Users table is not initialized in Supabase yet',
+          },
+          { status: 503 }
+        )
+      }
+
       return NextResponse.json(
         { success: false, error: result.error },
         { status: 400 }

@@ -7,6 +7,8 @@ const cspHeader = [
   "base-uri 'self'",
   "frame-ancestors 'none'",
   "object-src 'none'",
+  "child-src 'self' blob:",
+  "worker-src 'self' blob:",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data: https:",
   "style-src 'self' 'unsafe-inline' https:",

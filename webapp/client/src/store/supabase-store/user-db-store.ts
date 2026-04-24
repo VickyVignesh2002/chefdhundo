@@ -228,14 +228,23 @@ export const useSupabaseUserStore = create<UserSupabaseState>((set, get) => ({
   // Create user from Clerk data if not found in Supabase
   createUserFromClerkData: async (clerkUser: ClerkUserProfile) => {
     try {
-      const primaryEmail = clerkUser.emailAddresses?.find((email) => 
+      const primaryEmail = clerkUser.emailAddresses?.find((email) =>
         email.id === clerkUser.primaryEmailAddressId
-      )?.emailAddress
+      )?.emailAddress ?? clerkUser.emailAddresses?.[0]?.emailAddress
+
+      if (!primaryEmail) {
+        set({
+          isLoading: false,
+          isUserLoaded: true,
+          error: null,
+        })
+        return
+      }
 
       const userData = {
         clerk_user_id: clerkUser.id,
         name: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Unknown User',
-        email: primaryEmail || undefined,
+        email: primaryEmail,
         photo: clerkUser.imageUrl || undefined
       }
 

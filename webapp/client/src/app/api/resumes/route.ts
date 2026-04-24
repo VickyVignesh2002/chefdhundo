@@ -3,6 +3,11 @@ import { auth } from '@clerk/nextjs/server'
 import { getAllResumes, getAllResumesPaginated, createResume, getResumesByUserId, getUserByClerkId } from '@/lib/supabase/database'
 import { ResumeInsert } from '@/types/supabase'
 
+function isMissingResumesTableError(error: string | undefined): boolean {
+  if (!error) return false
+  return error.toLowerCase().includes("could not find the table 'public.resumes'")
+}
+
 function getRoleFromClaims(sessionClaims: unknown): string {
   const claims = sessionClaims as
     | {
@@ -62,6 +67,18 @@ export async function GET(request: NextRequest) {
       const result = await getResumesByUserId(requestedUserId)
       
       if (!result.success) {
+        if (isMissingResumesTableError(result.error)) {
+          return NextResponse.json(
+            {
+              success: true,
+              data: [],
+              schemaReady: false,
+              message: 'Resumes table is not initialized in Supabase yet',
+            },
+            { status: 200 }
+          )
+        }
+
         return NextResponse.json(
           { success: false, error: result.error, data: null },
           { status: 200 }
@@ -88,6 +105,25 @@ export async function GET(request: NextRequest) {
         })
         
         if (!result.success) {
+          if (isMissingResumesTableError(result.error)) {
+            return NextResponse.json(
+              {
+                success: true,
+                data: [],
+                pagination: {
+                  page,
+                  limit,
+                  total: 0,
+                  totalPages: 1,
+                  hasMore: false,
+                },
+                schemaReady: false,
+                message: 'Resumes table is not initialized in Supabase yet',
+              },
+              { status: 200 }
+            )
+          }
+
           return NextResponse.json(
             { success: false, error: result.error },
             { status: 500 }
@@ -109,6 +145,18 @@ export async function GET(request: NextRequest) {
         const result = await getAllResumes()
         
         if (!result.success) {
+          if (isMissingResumesTableError(result.error)) {
+            return NextResponse.json(
+              {
+                success: true,
+                data: [],
+                schemaReady: false,
+                message: 'Resumes table is not initialized in Supabase yet',
+              },
+              { status: 200 }
+            )
+          }
+
           return NextResponse.json(
             { success: false, error: result.error },
             { status: 500 }
@@ -213,6 +261,17 @@ export async function POST(request: NextRequest) {
     const result = await createResume(resumeData)
     
     if (!result.success) {
+      if (isMissingResumesTableError(result.error)) {
+        return NextResponse.json(
+          {
+            success: false,
+            schemaReady: false,
+            error: 'Resumes table is not initialized in Supabase yet',
+          },
+          { status: 503 }
+        )
+      }
+
       return NextResponse.json(
         { success: false, error: result.error },
         { status: 400 }
