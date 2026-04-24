@@ -209,11 +209,14 @@ export const useSupabaseUserStore = create<UserSupabaseState>((set, get) => ({
         return foundUser
       } else {
         const backendError = typeof result.error === 'string' ? result.error : null
+        const backendWarning = result.schemaReady === false
+          ? (typeof result.message === 'string' ? result.message : 'Database schema is not ready. Please verify Supabase tables and permissions.')
+          : null
         set({ 
           currentUser: null, 
           isLoading: false, 
           isUserLoaded: true,
-          error: isNotFoundMessage(backendError) ? null : backendError
+          error: backendWarning || (isNotFoundMessage(backendError) ? null : backendError)
         })
         
         return null

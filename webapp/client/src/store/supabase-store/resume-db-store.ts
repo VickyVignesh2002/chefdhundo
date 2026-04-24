@@ -194,6 +194,9 @@ export const useSupabaseResumeStore = create<ResumeSupabaseState>((set, get) => 
       if (result.success && result.data) {
         console.log('✅ Supabase Resume Store: Resumes fetched successfully:', result.data.length)
         const dedupedResumes = dedupeResumesByUser(result.data)
+        const backendWarning = result.schemaReady === false
+          ? (result.message || 'Database schema is not ready. Please verify Supabase tables and permissions.')
+          : null
         
         // Extract unique professions for filter dropdown
         const professions = new Set<string>()
@@ -209,7 +212,7 @@ export const useSupabaseResumeStore = create<ResumeSupabaseState>((set, get) => 
           resumes: dedupedResumes, 
           isLoading: false, 
           isResumeLoaded: true,
-          error: null,
+          error: backendWarning,
           uniqueProfessions: Array.from(professions).sort()
         })
       } else {
@@ -276,6 +279,9 @@ export const useSupabaseResumeStore = create<ResumeSupabaseState>((set, get) => 
       
       if (result.success && result.data) {
         const dedupedResumes = dedupeResumesByUser(result.data)
+        const backendWarning = result.schemaReady === false
+          ? (result.message || 'Database schema is not ready. Please verify Supabase tables and permissions.')
+          : null
         console.log('✅ Supabase Resume Store: Paginated resumes fetched:', {
           count: dedupedResumes.length,
           pagination: result.pagination
@@ -290,7 +296,7 @@ export const useSupabaseResumeStore = create<ResumeSupabaseState>((set, get) => 
           resumes: dedupedResumes, 
           isLoading: false, 
           isResumeLoaded: true,
-          error: null,
+          error: backendWarning,
           pagination: result.pagination || null
         })
       } else {
@@ -342,11 +348,14 @@ export const useSupabaseResumeStore = create<ResumeSupabaseState>((set, get) => 
       const result = await response.json()
       
       if (result.success && result.data) {
+        const backendWarning = result.schemaReady === false
+          ? (result.message || 'Database schema is not ready. Please verify Supabase tables and permissions.')
+          : null
         set({ 
           resumes: result.data, 
           isLoading: false, 
           isResumeLoaded: true,
-          error: null 
+          error: backendWarning
         })
       } else {
         set({ 
