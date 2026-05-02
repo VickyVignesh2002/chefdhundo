@@ -310,6 +310,34 @@ export async function getResumesByUserId(userId: string): Promise<ApiResponse<Re
 }
 
 /**
+ * Get the latest resume by phone number (used for WhatsApp duplicate check)
+ */
+export async function getResumeByPhone(phone: string): Promise<ApiResponse<Resume>> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('resumes')
+      .select('*')
+      .eq('phone', phone)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    if (!data) {
+      return { success: false, error: 'No resume found for this phone number' }
+    }
+
+    return { success: true, data }
+  } catch (error) {
+    console.error('❌ Unexpected error fetching resume by phone:', error)
+    return { success: false, error: 'Failed to fetch resume by phone' }
+  }
+}
+
+/**
  * Update resume
  */
 export async function updateResume(resumeId: string, updates: ResumeUpdate): Promise<ApiResponse<Resume>> {

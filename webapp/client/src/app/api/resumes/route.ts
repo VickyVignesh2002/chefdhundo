@@ -26,6 +26,38 @@ function getRoleFromClaims(sessionClaims: unknown): string {
   return claims?.metadata?.role || claims?.publicMetadata?.role || claims?.role || 'user'
 }
 
+// --- Safe Enum Validators ---
+function safeGender(value: unknown): 'Male' | 'Female' | 'Other' | 'Prefer not to say' | null {
+  const allowed = ["Male", "Female", "Other", "Prefer not to say"]
+  const strVal = typeof value === 'string' ? value : ''
+  return allowed.includes(strVal) ? (strVal as any) : null
+}
+
+function safeTraining(value: unknown): 'yes' | 'no' | 'try' | null {
+  const allowed = ["yes", "no", "try"]
+  const strVal = typeof value === 'string' ? value : ''
+  return allowed.includes(strVal) ? (strVal as any) : null
+}
+
+function safeWorkType(value: unknown): 'full' | 'part' | 'contract' | null {
+  const allowed = ["full", "part", "contract"]
+  const strVal = typeof value === 'string' ? value : ''
+  return allowed.includes(strVal) ? (strVal as any) : null
+}
+
+function safeJoining(value: unknown): 'immediate' | 'specific' | null {
+  const allowed = ["immediate", "specific"]
+  const strVal = typeof value === 'string' ? value : ''
+  return allowed.includes(strVal) ? (strVal as any) : null
+}
+
+function safeBusinessType(value: unknown): 'any' | 'new' | 'old' | null {
+  const allowed = ["any", "new", "old"]
+  const strVal = typeof value === 'string' ? value : ''
+  return allowed.includes(strVal) ? (strVal as any) : null
+}
+// ----------------------------
+
 // Cache configuration
 const CACHE_MAX_AGE = 60 // 1 minute
 const STALE_WHILE_REVALIDATE = 300 // 5 minutes
@@ -234,16 +266,30 @@ export async function GET(request: NextRequest) {
 
 // POST /api/resumes - Create new resume
 export async function POST(request: NextRequest) {
+  // ── Step 1: Parse body first so we can check from_whatsapp before auth ──
+  let body: Record<string, unknown>
   try {
-    const { userId, sessionClaims } = await auth()
+    body = await request.json()
+  } catch {
+    return NextResponse.json(
+      { success: false, error: 'Invalid JSON body' },
+      { status: 400 }
+    )
+  }
 
-    const body = await request.json()
-    const isWhatsapp = body.from_whatsapp === true
+  const isWhatsapp = body.from_whatsapp === true
 
+  try {
+    let userId: string | null = null
+    let sessionClaims: unknown = null
     let currentSupabaseUserId: string | null = null
 
-    // ✅ Only fetch user if NOT WhatsApp
+    // ── Step 2: Only run Clerk auth for non-WhatsApp requests ──────────────
     if (!isWhatsapp) {
+      const authResult = await auth()
+      userId = authResult.userId
+      sessionClaims = authResult.sessionClaims
+
       if (!userId) {
         return NextResponse.json(
           { success: false, error: 'Unauthorized' },
@@ -261,11 +307,13 @@ export async function POST(request: NextRequest) {
       }
 
       currentSupabaseUserId = currentUserResult.data.id
+    } else {
+      console.log('📱 WhatsApp resume creation — skipping Clerk auth')
     }
 
     const role = getRoleFromClaims(sessionClaims)
 
-    // ✅ Validation (different for WhatsApp)
+    // ── Step 3: Validation ─────────────────────────────────────────────────
     if (isWhatsapp) {
       if (!body.name || !body.phone) {
         return NextResponse.json(
@@ -289,8 +337,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ✅ Resume data
-    // 🔥 DEBUG: Log user IDs before creating resume
+    // ── Step 4: Build resume payload ───────────────────────────────────────
     if (!isWhatsapp) {
       console.log('📋 Resume Creation - Website Flow')
       console.log('  🔐 Clerk userId:', userId)
@@ -300,44 +347,43 @@ export async function POST(request: NextRequest) {
 
     const resumeData: ResumeInsert = {
       user_id: isWhatsapp ? null : currentSupabaseUserId,
-      name: body.name,
-      email: isWhatsapp ? `${body.phone}@wa.chefdhundo.com` : body.email,
-      phone: body.phone || null,
-      user_location: body.user_location || null,
-      age_range: body.age_range || null,
-      gender: body.gender || null,
-      city: body.city || null,
-      user_state: body.user_state || null,
-      pin_code: body.pin_code || null,
-      experience_years: body.experience_years || null,
-      experiences: body.experiences || null,
-      profession: body.profession || null,
-      job_role: body.job_role || null,
-      education: body.education || null,
-      cuisines: body.cuisines || null,
-      languages: body.languages || null,
-      certifications: body.certifications || null,
-      current_ctc: body.current_ctc || null,
-      expected_ctc: body.expected_ctc || null,
-      notice_period: body.notice_period || null,
-      training: body.training || null,
-      preferred_location: body.preferred_location || null,
-      joining: body.joining || null,
-      work_type: body.work_type || null,
-      business_type: body.business_type || null,
-      linkedin_profile: body.linkedin_profile || null,
-      portfolio_website: body.portfolio_website || null,
-      bio: body.bio || null,
-      passport: body.passport || null,
-      photo: body.photo || null,
-      resume_file: body.resume_file || null,
+      name: (body.name as string) || '',
+      email: isWhatsapp ? `${body.phone}@wa.chefdhundo.com` : (body.email as string) || '',
+      phone: (body.phone as string) || null,
+      user_location: (body.user_location as string) || null,
+      age_range: (body.age_range as string) || null,
+      gender: safeGender(body.gender),
+      city: (body.city as string) || null,
+      user_state: (body.user_state as string) || null,
+      pin_code: (body.pin_code as string) || null,
+      experience_years: (body.experience_years as number) || null,
+      experiences: (body.experiences as string) || null,
+      profession: (body.profession as string) || null,
+      job_role: (body.job_role as string) || null,
+      education: (body.education as string) || null,
+      cuisines: (body.cuisines as string) || null,
+      languages: (body.languages as string) || null,
+      certifications: (body.certifications as string) || null,
+      current_ctc: (body.current_ctc as string) || null,
+      expected_ctc: (body.expected_ctc as string) || null,
+      notice_period: (body.notice_period as string) || null,
+      training: safeTraining(body.training),
+      preferred_location: (body.preferred_location as string) || null,
+      joining: safeJoining(body.joining),
+      work_type: safeWorkType(body.work_type),
+      business_type: safeBusinessType(body.business_type),
+      linkedin_profile: (body.linkedin_profile as string) || null,
+      portfolio_website: (body.portfolio_website as string) || null,
+      bio: (body.bio as string) || null,
+      passport: (body.passport as string) || null,
+      photo: (body.photo as string) || null,
+      resume_file: (body.resume_file as string) || null,
 
       // 🔥 NEW (IMPORTANT)
       claimed: isWhatsapp ? false : true,
       claim_token: isWhatsapp ? generateToken() : null
     }
 
-    // 🔥 DEBUG: Log final resumeData.user_id before insert
     if (!isWhatsapp) {
       console.log('  ✅ Final resumeData.user_id:', resumeData.user_id)
     }
@@ -358,7 +404,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error) {
-    console.error('Error in POST /api/resumes:', error)
+    console.error('❌ Error in POST /api/resumes:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

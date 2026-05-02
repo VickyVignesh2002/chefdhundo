@@ -43,7 +43,6 @@ export async function POST(request: NextRequest) {
       .from('resumes')
       .select('*')
       .eq('claim_token', token)
-      .eq('claimed', false)
       .maybeSingle()
 
     console.log('CLAIM STEP 1 - FOUND RESUME:', existingResume)
@@ -60,9 +59,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'This resume has already been claimed.'
+          error: 'Invalid or expired claim link'
         },
         { status: 400 }
+      )
+    }
+
+    if (existingResume.claimed === true) {
+      return NextResponse.json(
+        {
+          success: true,
+          data: {
+            resumeId: existingResume.id,
+            resume: existingResume,
+            message: 'Resume already claimed'
+          }
+        },
+        { status: 200 }
       )
     }
 
@@ -79,21 +92,13 @@ export async function POST(request: NextRequest) {
 
     const supabaseUserId = userResult.data.id
 
-    // CLAIM STEP 2: Build update payload — replace temp email if present
-    const existingEmail = existingResume.email as string | null
-    const isTempEmail = existingEmail?.endsWith('@wa.chefdhundo.com') ?? false
+    // CLAIM STEP 2: Build update payload
     const realEmail = userResult.data.email ?? null
 
-    const claimPayload: Record<string, unknown> = {
+    const claimPayload = {
       claimed: true,
       user_id: supabaseUserId,
-    }
-
-    if (isTempEmail && realEmail) {
-      claimPayload.email = realEmail
-      console.log(`📧 Claim: Replacing temp email [${existingEmail}] with real email [${realEmail}]`)
-    } else {
-      console.log(`📧 Claim: Email not replaced — isTempEmail=${isTempEmail}, hasRealEmail=${!!realEmail}`)
+      email: realEmail || existingResume.email
     }
 
     const { data: updatedResume, error: updateError } = await supabaseAdmin
