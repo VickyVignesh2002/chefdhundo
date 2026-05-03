@@ -17,10 +17,10 @@ function isResumesPermissionError(error: any): boolean {
 function getRoleFromClaims(sessionClaims: unknown): string {
   const claims = sessionClaims as
     | {
-        metadata?: { role?: string }
-        publicMetadata?: { role?: string }
-        role?: string
-      }
+      metadata?: { role?: string }
+      publicMetadata?: { role?: string }
+      role?: string
+    }
     | undefined
 
   return claims?.metadata?.role || claims?.publicMetadata?.role || claims?.role || 'user'
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams
     const requestedUserId = searchParams.get('user_id')
-    
+
     // Pagination params
     const page = parseInt(searchParams.get('page') || '1', 10)
     const limit = parseInt(searchParams.get('limit') || '12', 10)
@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
 
       // Get resumes for specific user (no pagination needed)
       const result = await getResumesByUserId(requestedUserId)
-      
+
       if (!result.success) {
         if (isMissingResumesTableError(result.error)) {
           return NextResponse.json(
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
     } else {
       // Check if pagination is requested
       const usePagination = searchParams.has('page') || searchParams.has('limit')
-      
+
       if (usePagination) {
         // Get paginated resumes with filters
         const result = await getAllResumesPaginated({
@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
           experience,
           profession
         })
-        
+
         if (!result.success) {
           if (isMissingResumesTableError(result.error)) {
             return NextResponse.json(
@@ -205,14 +205,14 @@ export async function GET(request: NextRequest) {
           pagination: result.pagination,
           message: `Found ${result.pagination?.total || 0} resumes`
         })
-        
+
         // Add cache headers for public data
         response.headers.set('Cache-Control', `public, s-maxage=${CACHE_MAX_AGE}, stale-while-revalidate=${STALE_WHILE_REVALIDATE}`)
         return response
       } else {
         // Legacy: Get all resumes (for backward compatibility)
         const result = await getAllResumes()
-        
+
         if (!result.success) {
           if (isMissingResumesTableError(result.error)) {
             return NextResponse.json(
@@ -249,7 +249,7 @@ export async function GET(request: NextRequest) {
           data: result.data,
           message: `Found ${result.data?.length || 0} resumes`
         })
-        
+
         // Add cache headers for public data
         response.headers.set('Cache-Control', `public, s-maxage=${CACHE_MAX_AGE}, stale-while-revalidate=${STALE_WHILE_REVALIDATE}`)
         return response
@@ -277,7 +277,12 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const isWhatsapp = body.from_whatsapp === true
+  const isWhatsapp =
+    body.from_whatsapp === true;
+  body.from_whatsapp === "true";
+
+  console.log("🔥 Incoming body:", body);
+  console.log("🔥 from_whatsapp:", body.from_whatsapp);
 
   try {
     let userId: string | null = null
