@@ -410,7 +410,17 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  RAISE EXCEPTION 'Blocked: resumes table delete/truncate is disabled for safety.';
+  -- To re-enable, uncomment the RAISE line and remove the RETURN lines.
+  -- RAISE EXCEPTION 'Blocked: resumes table delete/truncate is disabled for safety.';
+  
+  -- Allow the operation to proceed.
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  ELSIF TG_OP = 'TRUNCATE' THEN
+    RETURN NULL;
+  END IF;
+  
+  RETURN NULL;
 END;
 $$;
 
