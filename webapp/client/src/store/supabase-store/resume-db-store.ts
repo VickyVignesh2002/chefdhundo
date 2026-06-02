@@ -133,7 +133,9 @@ interface ResumeSupabaseState {
     profession?: string
   }) => Promise<void>
   fetchResumesByUserId: (userId: string) => Promise<void>
-  createResume: (resumeData: Omit<Resume, 'id' | 'created_at' | 'updated_at'>) => Promise<void>
+  createResume: (
+    resumeData: Partial<Omit<Resume, 'id' | 'created_at' | 'updated_at'>> & Pick<Resume, 'user_id' | 'name'>
+  ) => Promise<void>
   updateResume: (resumeId: string, updates: Partial<Resume>) => Promise<void>
   deleteResume: (resumeId: string) => Promise<void>
   searchResumes: (criteria: {

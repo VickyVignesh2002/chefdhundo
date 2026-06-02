@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 export default function SignInPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
@@ -67,7 +66,7 @@ export default function SignInPage() {
       }
 
       const nextPath = searchParams.get("next") || "/dashboard";
-      router.push(nextPath);
+      window.location.assign(nextPath);
     } catch {
       setMessage("Could not verify OTP");
     } finally {

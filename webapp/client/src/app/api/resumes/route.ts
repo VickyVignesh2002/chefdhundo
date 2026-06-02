@@ -278,8 +278,7 @@ export async function POST(request: NextRequest) {
   }
 
   const isWhatsapp =
-    body.from_whatsapp === true;
-  body.from_whatsapp === "true";
+    body.from_whatsapp === true || body.from_whatsapp === "true";
 
   console.log("🔥 Incoming body:", body);
   console.log("🔥 from_whatsapp:", body.from_whatsapp);
@@ -288,6 +287,7 @@ export async function POST(request: NextRequest) {
     let userId: string | null = null
     let sessionClaims: unknown = null
     let currentSupabaseUserId: string | null = null
+    let currentUserEmail: string | null = null
 
     // ── Step 2: Only run Clerk auth for non-WhatsApp requests ──────────────
     if (!isWhatsapp) {
@@ -312,6 +312,7 @@ export async function POST(request: NextRequest) {
       }
 
       currentSupabaseUserId = currentUserResult.data.id
+      currentUserEmail = currentUserResult.data.email || null
     } else {
       console.log('📱 WhatsApp resume creation — skipping Clerk auth')
     }
@@ -327,9 +328,9 @@ export async function POST(request: NextRequest) {
         )
       }
     } else {
-      if (!body.user_id || !body.name || !body.email) {
+      if (!body.user_id || !body.name) {
         return NextResponse.json(
-          { success: false, error: 'user_id, name, and email are required' },
+          { success: false, error: 'user_id and name are required' },
           { status: 400 }
         )
       }
@@ -353,7 +354,9 @@ export async function POST(request: NextRequest) {
     const resumeData: ResumeInsert = {
       user_id: isWhatsapp ? null : currentSupabaseUserId,
       name: (body.name as string) || '',
-      email: isWhatsapp ? `${body.phone}@wa.chefdhundo.com` : (body.email as string) || '',
+      email: isWhatsapp
+        ? `${body.phone}@wa.chefdhundo.com`
+        : currentUserEmail || `${String(body.phone || 'mobile').replace(/[^\d]/g, '')}@phone.chefdhundo.com`,
       phone: (body.phone as string) || null,
       user_location: (body.user_location as string) || null,
       age_range: (body.age_range as string) || null,

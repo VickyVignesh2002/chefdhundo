@@ -22,15 +22,22 @@ const UserBadge = memo(function UserBadge({ text, color }: { text: string; color
   )
 })
 
+function avatarLabel(name?: string | null) {
+  const value = (name || "").trim()
+  if (/^\+91\d{10}$/.test(value)) return value.slice(-2)
+  return value.slice(0, 2).toUpperCase() || "ME"
+}
+
 function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const { isSignedIn, isLoaded: isClerkLoaded } = useAuth()
+  const { isSignedIn, isLoaded: isClerkLoaded, signOut } = useAuth()
   
   // Track if we've ever loaded to prevent flicker on navigation
   const hasEverLoaded = useRef(false)
   
   // Supabase user store hooks - user is pre-loaded from server via AuthProvider
   const currentUser = useSupabaseCurrentUser()
+  const isMobileSignedIn = isSignedIn || !!currentUser
   const isLoadingUser = useSupabaseUserLoading()
   const userError = useSupabaseUserError()
   const isUserLoaded = useSupabaseUserLoaded()
@@ -46,19 +53,19 @@ function Navbar() {
 
   // Clear user state when user signs out
   useEffect(() => {
-    if (!isSignedIn && isClerkLoaded) {
+    if (!isSignedIn && !currentUser && isClerkLoaded) {
       clearCurrentUser()
       clearError()
       hasEverLoaded.current = false // Reset on sign out
     }
-  }, [isSignedIn, isClerkLoaded, clearCurrentUser, clearError])
+  }, [isSignedIn, currentUser, isClerkLoaded, clearCurrentUser, clearError])
 
   // Memoized user badges calculation - stable after first load
   const userBadges = useMemo(() => {
     // If we've loaded before, don't show loading state on navigation
     const showLoadingState = !hasEverLoaded.current && (isLoadingUser || !isClerkLoaded)
     
-    if (!isSignedIn) return []
+    if (!isMobileSignedIn) return []
     
     if (showLoadingState) {
       return [{ text: 'Loading...', color: 'bg-gray-100 text-gray-600' }]
@@ -107,7 +114,7 @@ function Navbar() {
     }
     
     return []
-  }, [isSignedIn, isLoadingUser, userError, currentUser, isUserLoaded, isClerkLoaded])
+  }, [isMobileSignedIn, isLoadingUser, userError, currentUser, isUserLoaded, isClerkLoaded])
 
   const toggleMobileMenu = useCallback(() => {
     setIsMobileMenuOpen(prev => !prev)
@@ -184,15 +191,26 @@ function Navbar() {
                 {!isClerkLoaded ? (
                   // Skeleton placeholder while Clerk loads
                   <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
-                ) : isSignedIn ? (
-                  <UserButton 
-                    afterSignOutUrl="/"
-                    appearance={{
-                      elements: {
-                        avatarBox: "w-8 h-8"
-                      }
-                    }}
-                  />
+                ) : isMobileSignedIn ? (
+                  isSignedIn ? (
+                    <UserButton 
+                      afterSignOutUrl="/"
+                      appearance={{
+                        elements: {
+                          avatarBox: "w-8 h-8"
+                        }
+                      }}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      title="Logout"
+                      onClick={() => signOut()}
+                      className="w-8 h-8 rounded-full bg-gray-900 text-white text-xs font-semibold"
+                    >
+                      {avatarLabel(currentUser?.name)}
+                    </button>
+                  )
                 ) : (
                   <SignInButton mode="modal">
                     <button className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium">
@@ -209,15 +227,26 @@ function Navbar() {
               <div className="w-10 h-10 flex items-center justify-center">
                 {!isClerkLoaded ? (
                   <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
-                ) : isSignedIn ? (
-                  <UserButton 
-                    afterSignOutUrl="/"
-                    appearance={{
-                      elements: {
-                        avatarBox: "w-8 h-8"
-                      }
-                    }}
-                  />
+                ) : isMobileSignedIn ? (
+                  isSignedIn ? (
+                    <UserButton 
+                      afterSignOutUrl="/"
+                      appearance={{
+                        elements: {
+                          avatarBox: "w-8 h-8"
+                        }
+                      }}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      title="Logout"
+                      onClick={() => signOut()}
+                      className="w-8 h-8 rounded-full bg-gray-900 text-white text-xs font-semibold"
+                    >
+                      {avatarLabel(currentUser?.name)}
+                    </button>
+                  )
                 ) : (
                   <SignInButton mode="modal">
                     <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium text-sm">

@@ -87,7 +87,7 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps) {
   }, [clerkLoaded, isSignedIn, clerkUser, store])
   
   return (
-    <AuthContext.Provider value={{ user: initialUser, isLoaded: true }}>
+    <AuthContext.Provider value={{ user: store.currentUser ?? initialUser, isLoaded: true }}>
       {children}
     </AuthContext.Provider>
   )

@@ -18,16 +18,7 @@ type JobType = 'full' | 'part' | 'contract';
 type JoiningType = 'immediate' | 'specific';
 type TrainingReadiness = 'yes' | 'no' | 'try';
 
-// Common Indian cities
-const INDIAN_CITIES = [
-  'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Ahmedabad', 'Chennai', 'Kolkata', 'Surat',
-  'Pune', 'Jaipur', 'Lucknow', 'Kanpur', 'Nagpur', 'Indore', 'Thane', 'Bhopal',
-  'Visakhapatnam', 'Pimpri & Chinchwad', 'Patna', 'Vadodara', 'Ghaziabad', 'Ludhiana',
-  'Agra', 'Nashik', 'Faridabad', 'Meerut', 'Rajkot', 'Kalyan & Dombivali', 'Vasai Virar',
-  'Varanasi', 'Srinagar', 'Dhanbad', 'Jodhpur', 'Amritsar', 'Raipur', 'Allahabad',
-  'Coimbatore', 'Jabalpur', 'Gwalior', 'Vijayawada', 'Madurai', 'Guwahati', 'Chandigarh',
-  'Hubli and Dharwad', 'Amroha', 'Moradabad', 'Gurgaon', 'Aligarh', 'Solapur', 'Ranchi'
-];
+const LOCATION_BUCKETS = ['Metro Cities', 'Non-Metro Cities'];
 
 // Profession options
 const PROFESSION_OPTIONS = [
@@ -52,7 +43,6 @@ const PROFESSION_OPTIONS = [
 interface ResumeFormData {
   // Step 1 - Essential Contact Info
   name: string;
-  email: string;
   mobile: string;
   city: string;
   
@@ -69,6 +59,14 @@ interface ResumeFormData {
   joining: JoiningType;
   training: TrainingReadiness;
   candidateConsent: boolean;
+}
+
+function getAccountPhone(currentUser: ReturnType<typeof useSupabaseCurrentUser>) {
+  const phoneFromId = currentUser?.clerk_user_id?.startsWith('phone:')
+    ? currentUser.clerk_user_id.replace('phone:', '')
+    : '';
+  const phoneFromName = currentUser?.name?.startsWith('+91') ? currentUser.name : '';
+  return phoneFromId || phoneFromName || '';
 }
 
 export function SubmitResume() {
@@ -99,7 +97,6 @@ export function SubmitResume() {
   const [resumeForm, setResumeForm] = React.useState<ResumeFormData>({
     // Step 1 - Essential Contact Info
     name: '',
-    email: '',
     mobile: '',
     city: '',
     
@@ -118,10 +115,11 @@ export function SubmitResume() {
     candidateConsent: false,
   });
 
-  // Auto-fill email from logged-in user
+  // Auto-fill mobile from the logged-in mobile account.
   React.useEffect(() => {
-    if (currentUser?.email) {
-      setResumeForm((prev) => ({ ...prev, email: currentUser.email }));
+    const accountPhone = getAccountPhone(currentUser);
+    if (accountPhone) {
+      setResumeForm((prev) => ({ ...prev, mobile: accountPhone }));
     }
   }, [currentUser]);
 
@@ -164,13 +162,8 @@ export function SubmitResume() {
   const handleNext = () => {
     if (currentStep === 1) {
       // Validate step 1
-      if (!resumeForm.name || !resumeForm.email || !resumeForm.mobile || !resumeForm.city) {
+      if (!resumeForm.name || !resumeForm.mobile || !resumeForm.city) {
         toast.error('Please fill in all required fields');
-        return;
-      }
-      // Validate mobile number
-      if (resumeForm.mobile.length !== 10) {
-        toast.error('Mobile number must be exactly 10 digits');
         return;
       }
       setCurrentStep(2);
@@ -209,7 +202,6 @@ export function SubmitResume() {
       const resumeData = {
         user_id: currentUser.id,
         name: resumeForm.name,
-        email: currentUser.email, // Use email from logged-in user
         phone: resumeForm.mobile,
         user_location: resumeForm.city,
         age_range: null, // Removed from form UI
@@ -311,32 +303,19 @@ export function SubmitResume() {
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="email">Email / ईमेल *</Label>
-        <Input 
-          id="email" 
-          type="email" 
-          required 
-          placeholder="john@example.com" 
-          value={resumeForm.email} 
-          onChange={handleInputChange}
-          disabled
-          className="bg-gray-100 cursor-not-allowed"
-        />
-        <p className="text-xs text-gray-500">Using your account email</p>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="mobile">Mobile No. / मोबाइल नंबर *</Label>
+        <Label htmlFor="mobile">Mobile No. *</Label>
         <Input 
           id="mobile" 
           type="tel" 
           required 
-          placeholder="9876543210" 
+          placeholder="+919876543210" 
           value={resumeForm.mobile} 
           onChange={handleInputChange}
-          maxLength={10}
+          readOnly
+          disabled
+          className="bg-gray-100 cursor-not-allowed"
         />
-        <p className="text-xs text-gray-500">Enter 10 digit mobile number</p>
+        <p className="text-xs text-gray-500">Using your logged-in mobile number</p>
       </div>
       
       <div className="space-y-2">
@@ -346,7 +325,7 @@ export function SubmitResume() {
             <SelectValue placeholder="Select your city" />
           </SelectTrigger>
           <SelectContent className="max-h-60">
-            {INDIAN_CITIES.map((city) => (
+            {LOCATION_BUCKETS.map((city) => (
               <SelectItem key={city} value={city}>{city}</SelectItem>
             ))}
           </SelectContent>

@@ -262,6 +262,15 @@ function buildFallbackEmail(phone: string) {
   return `${phone.replace("+", "")}@phone.chefdhundo.com`;
 }
 
+function isGeneratedPhoneName(name: string | null | undefined, phone: string) {
+  const trimmed = (name || "").trim();
+  return !trimmed || trimmed === `User ${phone}` || trimmed === "Unknown User";
+}
+
+function mobileDisplayName(phone: string, name?: string | null) {
+  return isGeneratedPhoneName(name, phone) ? phone : (name || phone).trim();
+}
+
 export async function ensureUserForPhone(phone: string) {
   const syntheticId = phoneToSyntheticId(phone);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -278,19 +287,30 @@ export async function ensureUserForPhone(phone: string) {
   }
 
   if (existing) {
+    const updates: Record<string, string> = {};
+
     if (phone === ADMIN_BOOTSTRAP_PHONE && existing.role !== "admin") {
-      const { data: promoted, error: promoteError } = await admin
+      updates.role = "admin";
+    }
+
+    if (isGeneratedPhoneName(existing.name, phone)) {
+      updates.name = phone;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      const { data: updated, error: updateError } = await admin
         .from("users")
-        .update({ role: "admin" })
+        .update(updates)
         .eq("id", existing.id)
         .select("*")
         .single();
 
-      if (promoteError) {
-        throw new Error(`Admin bootstrap failed: ${promoteError.message}`);
+      if (updateError) {
+        throw new Error(`User session repair failed: ${updateError.message}`);
       }
-      return promoted;
+      return updated;
     }
+
     return existing;
   }
 
@@ -301,7 +321,7 @@ export async function ensureUserForPhone(phone: string) {
     .from("users")
     .insert({
       clerk_user_id: syntheticId,
-      name: `User ${phone}`,
+      name: phone,
       email,
       role,
       chef: "no",
@@ -322,7 +342,7 @@ export async function createLoginToken(phone: string) {
     sub: user.clerk_user_id,
     phone,
     role: user.role as UserRole,
-    name: user.name,
+    name: mobileDisplayName(phone, user.name),
     email: user.email,
   };
 
@@ -376,15 +396,8 @@ export async function currentUser(): Promise<ClerkCompatUser | null> {
   const session = await getSessionFromCookie();
   if (!session) return null;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const admin = supabaseAdmin as any;
-  const { data: dbUser } = await admin
-    .from("users")
-    .select("*")
-    .eq("clerk_user_id", session.sub)
-    .maybeSingle();
-
-  const displayName = dbUser?.name || session.name || `User ${session.phone}`;
+  const dbUser = await ensureUserForPhone(session.phone);
+  const displayName = mobileDisplayName(session.phone, dbUser?.name || session.name);
   const email = dbUser?.email || session.email || buildFallbackEmail(session.phone);
   const role = (dbUser?.role || session.role) as UserRole;
   const names = splitName(displayName);
@@ -425,7 +438,7 @@ export async function clerkClient() {
           }
           return {
             id: userId,
-            firstName: "User",
+            firstName: phone,
             lastName: null,
             imageUrl: null,
             primaryEmailAddressId: "primary",
@@ -436,7 +449,8 @@ export async function clerkClient() {
         }
 
         const phone = syntheticIdToPhone(data.clerk_user_id);
-        const nameParts = splitName(data.name);
+        const displayName = phone ? mobileDisplayName(phone, data.name) : data.name;
+        const nameParts = splitName(displayName);
         return {
           id: data.clerk_user_id,
           firstName: nameParts.firstName,

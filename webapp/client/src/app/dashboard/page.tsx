@@ -20,7 +20,6 @@ import { toast, Toaster } from 'sonner';
 // Interface for editable resume data (complete Resume type for editing)
 interface EditableResumeData {
   name: string;
-  email: string;
   phone: string;
   user_location: string;
   age_range: string;
@@ -59,7 +58,6 @@ export default function DashboardPage() {
   const { user: clerkUser } = useUser();
   const { findAndSetCurrentUserByClerkId, clearCurrentUser, currentUser, isLoading: userLoading, error: userError } = useSupabaseUserStore();
   const { fetchResumesByUserId, resumes, updateResume, isLoading: resumesLoading, error: resumesError } = useSupabaseResumeStore();
-  const emailSyncedRef = useRef(false);
   const [userResume, setUserResume] = useState<Resume | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editValues, setEditValues] = useState<Partial<EditableResumeData>>({});
@@ -78,8 +76,15 @@ export default function DashboardPage() {
   const [deletingFile, setDeletingFile] = useState(false);
 
   // Derived Supabase user fields
-  const userName = currentUser?.name ?? '';
-  const userEmail = currentUser?.email ?? '';
+  const accountMobile =
+    clerkUser?.primaryPhoneNumber?.phoneNumber ||
+    (currentUser?.clerk_user_id?.startsWith('phone:')
+      ? currentUser.clerk_user_id.replace('phone:', '')
+      : '');
+  const userName =
+    currentUser?.name && currentUser.name !== accountMobile
+      ? currentUser.name
+      : accountMobile;
   const userRole = currentUser?.role ?? '';
   const chefStatus = currentUser?.chef ?? '';
   const isChef = chefStatus === 'yes';
@@ -91,8 +96,8 @@ export default function DashboardPage() {
   // Fetch current user from Supabase when Clerk user is available
   useEffect(() => {
     if (clerkUser?.id) {
-      console.log('🔍 Dashboard: Clerk user ID:', clerkUser.id);
-      console.log('🔍 Dashboard: Fetching Supabase user with Clerk ID:', clerkUser.id);
+      console.log('Dashboard: mobile session ID:', clerkUser.id);
+      console.log('Dashboard: fetching Supabase user with session ID:', clerkUser.id);
       findAndSetCurrentUserByClerkId(clerkUser.id);
     }
   }, [clerkUser?.id, findAndSetCurrentUserByClerkId]);
@@ -133,35 +138,6 @@ export default function DashboardPage() {
       setUserResume(null);
     }
   }, [resumes, resumesLoading]);
-
-  // Silently sync temp email → real email after resume loads (WAHA flow)
-  // Runs once per session when a resume with a temp email is detected
-  useEffect(() => {
-    if (!currentUser?.id || !userResume || emailSyncedRef.current) return;
-
-    const isTempEmail = userResume.email?.endsWith('@wa.chefdhundo.com') ?? false;
-    if (!isTempEmail) return; // Already a real email — nothing to do
-
-    emailSyncedRef.current = true; // Prevent duplicate calls
-    console.log('📧 Dashboard: Temp email detected, syncing to real email...');
-
-    fetch('/api/resumes/sync-email', { method: 'POST' })
-      .then(res => res.json())
-      .then(result => {
-        if (result.success && result.updated && result.resume) {
-          console.log('📧 Dashboard: Email synced successfully →', result.resume.email);
-          setUserResume(result.resume); // Update UI immediately
-          fetchResumesByUserId(currentUser.id); // Refresh store in background
-        } else {
-          console.log('ℹ️ Dashboard: Sync-email skipped:', result.message);
-        }
-      })
-      .catch(err => {
-        emailSyncedRef.current = false; // Allow retry on next render if it failed
-        console.error('❌ Dashboard: Email sync request failed:', err);
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser?.id, userResume?.id]);
 
   // Silently check for pending claim token from OAuth redirect.
   // This fires once when currentUser.id is first available.
@@ -225,7 +201,6 @@ export default function DashboardPage() {
       // Initialize edit values with current resume data
       const initialValues: Partial<EditableResumeData> = {
         name: userResume.name || '',
-        email: userResume.email || '',
         phone: userResume.phone || '',
         user_location: userResume.user_location || '',
         age_range: userResume.age_range || '',
@@ -271,7 +246,6 @@ export default function DashboardPage() {
 
     const resumeData = {
       name: userResume.name || 'Chef Name',
-      email: userResume.email || 'Email not provided',
       mobile: userResume.phone || 'Phone not provided',
       location: userResume.user_location || userResume.city || 'Location not specified',
       age: userResume.age_range || 'Age not specified',
@@ -523,14 +497,7 @@ export default function DashboardPage() {
         
         <div className="flex-1">
           {isEditing ? (
-            fieldName === 'email' ? (
-              <Input
-                value={String(displayValue || '')}
-                className="flex-1 bg-gray-100"
-                readOnly
-                disabled
-              />
-            ) : type === 'textarea' ? (
+            type === 'textarea' ? (
               <Textarea
                 value={typeof displayValue === 'string' ? displayValue : ''}
                 onChange={(e) => handleFieldChange(fieldName, e.target.value)}
@@ -640,7 +607,6 @@ export default function DashboardPage() {
                 </h3>
                 
                 {renderField('name', 'Full Name', userResume.name)}
-                {renderField('email', 'Email', userResume.email)} {/* Email is disabled */}
                 {renderField('phone', 'Phone', userResume.phone)}
                 {renderField('age_range', 'Age Range', userResume.age_range, 'select', ['18-25', '26-35', '36-45', '46-55', '55+'])}
                 {renderField('gender', 'Gender', userResume.gender, 'select', ['Male', 'Female', 'Other', 'Prefer not to say'])}
@@ -902,7 +868,7 @@ export default function DashboardPage() {
         {currentUser ? (
           <div className="mt-6 space-y-4">
             <div className="flex items-center gap-4">
-              <span className="font-medium text-gray-700 w-16">Name:</span>
+              <span className="font-medium text-gray-700 w-16">Account:</span>
               <Input 
                 value={userName}
                 className="w-64"
@@ -911,9 +877,9 @@ export default function DashboardPage() {
               />
             </div>
             <div className="flex items-center gap-4">
-              <span className="font-medium text-gray-700 w-16">Email:</span>
+              <span className="font-medium text-gray-700 w-16">Mobile:</span>
               <Input 
-                value={userEmail}
+                value={accountMobile}
                 className="w-64"
                 readOnly
                 disabled
@@ -954,8 +920,8 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="mt-6">
-            <p className="text-orange-600">User not found in database</p>
-            <p className="text-sm text-gray-500">Clerk ID: {clerkUser?.id}</p>
+            <p className="text-orange-600">Mobile account not found in database</p>
+            <p className="text-sm text-gray-500">Session ID: {clerkUser?.id}</p>
           </div>
         )}
         

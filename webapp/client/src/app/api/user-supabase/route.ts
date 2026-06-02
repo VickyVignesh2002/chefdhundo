@@ -8,6 +8,7 @@ import {
 } from '@/lib/supabase/database'
 import type { UserUpdate } from '@/types/supabase'
 import { ClerkUserData } from '@/types/supabase'
+import { ensureUserForPhone, syntheticIdToPhone } from '@/lib/auth/server'
 
 function isMissingUsersTableError(error: string | undefined): boolean {
   if (!error) return false
@@ -32,6 +33,15 @@ export async function GET(request: NextRequest) {
         { success: false, error: 'clerk_id is required' },
         { status: 400 }
       )
+    }
+
+    const phone = syntheticIdToPhone(clerkId)
+    if (phone) {
+      const user = await ensureUserForPhone(phone)
+      return NextResponse.json({
+        success: true,
+        data: user
+      })
     }
 
     const result = await getUserByClerkId(clerkId)
