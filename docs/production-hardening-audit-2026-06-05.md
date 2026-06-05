@@ -56,23 +56,39 @@ Fix:
 - Navbar now renders a retry/session-check control on auth errors instead of incorrectly showing `Login`.
 - `useAuth()` exposes the existing `reload()` method so the retry control does not create another independent auth state.
 
+### Medium: Next/PostCSS advisory
+
+`npm audit --audit-level=moderate` reported GHSA-qx2v-qp2m-jg93 because stable Next.js bundled `postcss@8.4.31`. `npm audit fix --force` suggested an unsafe framework downgrade.
+
+Fix:
+
+- Added an npm override for Next's nested PostCSS dependency: `next -> postcss@8.5.10`.
+- Regenerated `webapp/client/package-lock.json`.
+- Confirmed `npm ls next postcss --depth=3` resolves Next's nested PostCSS as `8.5.10 overridden`.
+- Confirmed `npm audit --audit-level=moderate` now reports `0 vulnerabilities`.
+
+Future cleanup:
+
+- Remove the override after stable Next.js bundles `postcss >= 8.5.10`.
+
+### Low: stale Clerk/email artifacts outside active app
+
+The active Next.js app no longer had email login wiring, but an old server-side Clerk/email sync function and sample email SQL comments remained in `webapp/server`.
+
+Fix:
+
+- Removed `webapp/server/src/models/edgeFunction/handleuserSybc.ts`.
+- Replaced sample email users in SQL comments with mobile identity examples.
+- Removed historical `.old` SQL files and `oldSupabaseDB.txt` that still documented email/Clerk-era setup.
+- Updated the production-safe Supabase schema so legacy email columns are nullable in fresh and existing deployments.
+
+Remaining email references:
+
+- Generated Supabase TypeScript types still include nullable `email` fields because the columns are intentionally retained for one rollback-safe release.
+- Resume response sanitization still lists `email` as a private field to strip from API responses.
+- TextBee setup documentation mentions email only for TextBee account verification, not ChefDhundo user login.
+
 ## Findings Still Open / Deferred
-
-### Moderate: Next/PostCSS advisory remains
-
-`npm audit --audit-level=moderate` in `webapp/client` reports PostCSS XSS advisory through Next.js.
-
-Current status:
-
-- Latest stable `next` from npm is `16.2.7`.
-- The audit range currently points at a canary boundary and `npm audit fix --force` suggests an unsafe downgrade to `next@9.3.3`.
-- Do not run the force fix blindly.
-
-Recommended production action:
-
-- Track the upstream Next.js/PostCSS patched stable release.
-- Upgrade Next and `eslint-config-next` together when a stable patched version is available.
-- Rerun `npm audit --audit-level=moderate`, lint, tests, and build.
 
 ### Critical operational risk: leaked/shared secrets must be rotated
 
@@ -103,14 +119,11 @@ Required production smoke:
 - `webapp/client`: `npm run lint`
 - `webapp/client`: `npm test` - 3 files, 16 tests
 - `webapp/client`: `npm run build`
+- `webapp/client`: `npm audit --audit-level=moderate` - 0 vulnerabilities after PostCSS override
 - `supabase-mcp-server`: `npm audit --audit-level=moderate` - 0 vulnerabilities
 - `supabase-mcp-server`: `npm run build`
 - Signed mobile session harness: 20 dashboard refreshes returned `200`; logged-out dashboard redirected; logged-out resume API returned `401`; basic admin API returned `403`; signed resume responses did not include checked private fields.
 - Secret scan: no live secrets found in tracked files outside expected templates/docs
-
-### Known Warning
-
-- `webapp/client`: `npm audit --audit-level=moderate` reports 2 moderate advisories through Next/PostCSS.
 
 ## Production TODO Plan
 
@@ -120,5 +133,5 @@ Required production smoke:
 4. Run the mobile OTP smoke test with real TextBee gateway status checks.
 5. Run dashboard refresh/avatar/logout browser checks on the production HTTPS domain.
 6. Run resume authorization checks with seeded basic/pro/admin users.
-7. Track and apply the stable Next/PostCSS advisory fix when released.
+7. Track stable Next.js releases and remove the PostCSS override once Next bundles the patched version.
 8. Merge `mobile-auth` to `main` only after the above passes.
