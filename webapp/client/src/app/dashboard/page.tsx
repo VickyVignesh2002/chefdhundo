@@ -56,7 +56,14 @@ type ResumeEditableKey = keyof EditableResumeData & keyof Resume;
 export default function DashboardPage() {
   const router = useRouter();
   const { user: authUser } = useUser();
-  const { findAndSetCurrentUserByIdentityId, clearCurrentUser, currentUser, isLoading: userLoading, error: userError } = useSupabaseUserStore();
+  const {
+    findAndSetCurrentUserByIdentityId,
+    clearCurrentUser,
+    currentUser,
+    isLoading: userLoading,
+    error: userError,
+    isUserLoaded,
+  } = useSupabaseUserStore();
   const { fetchResumesByUserId, resumes, updateResume, isLoading: resumesLoading, error: resumesError } = useSupabaseResumeStore();
   const [userResume, setUserResume] = useState<Resume | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -526,12 +533,14 @@ export default function DashboardPage() {
     );
   };
 
-  if (userLoading || (resumesLoading && !userResume) || isProcessingClaim) {
+  const waitingForMobileProfile = Boolean(authUser && !currentUser && !isUserLoaded && !userError);
+
+  if (userLoading || waitingForMobileProfile || (resumesLoading && !userResume) || isProcessingClaim) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
         <Loader2 className="w-10 h-10 animate-spin text-orange-600 mb-4" />
         <div className="text-lg text-gray-700">
-          {isProcessingClaim ? 'Processing your claim...' : 'Loading your dashboard...'}
+          {isProcessingClaim ? 'Processing your claim...' : 'Loading your mobile account...'}
         </div>
       </div>
     );
@@ -892,10 +901,14 @@ export default function DashboardPage() {
               </Avatar>
             </div> */}
           </div>
-        ) : (
+        ) : isUserLoaded ? (
           <div className="mt-6">
             <p className="text-orange-600">Mobile account not found in database</p>
             <p className="text-sm text-gray-500">Please refresh once or sign in again if this continues.</p>
+          </div>
+        ) : (
+          <div className="mt-6">
+            <p className="text-gray-600">Loading your mobile account...</p>
           </div>
         )}
 

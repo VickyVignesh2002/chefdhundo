@@ -207,6 +207,7 @@ export function useAuth() {
     userId: user?.id ?? null,
     getToken: async () => null,
     signOut,
+    reload,
     error,
     status,
   };

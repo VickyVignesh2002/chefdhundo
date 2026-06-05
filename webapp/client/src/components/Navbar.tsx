@@ -73,9 +73,23 @@ function avatarLabel(name?: string | null) {
   return value.slice(0, 2).toUpperCase() || "ME"
 }
 
+function AuthRetryButton({ onRetry }: { onRetry: () => void }) {
+  return (
+    <button
+      type="button"
+      title="Retry session check"
+      aria-label="Retry session check"
+      onClick={onRetry}
+      className="rounded-full border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-700 hover:bg-orange-100"
+    >
+      Retry
+    </button>
+  )
+}
+
 function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const { isSignedIn, isLoaded: isAuthLoaded, signOut } = useAuth()
+  const { isSignedIn, isLoaded: isAuthLoaded, signOut, status: authStatus, reload: reloadAuth } = useAuth()
 
   // Track if we've ever loaded to prevent flicker on navigation
   const hasEverLoaded = useRef(false)
@@ -185,6 +199,43 @@ function Navbar() {
     isAdminUser ? [...navLinks, { href: "/admin", text: "Admin", primary: false, prefetch: false, fullReload: true }] : navLinks
   , [isAdminUser, navLinks])
 
+  const renderAuthControl = (loginClassName: string) => {
+    if (!isAuthLoaded) {
+      return <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
+    }
+
+    if (authStatus === 'error' && !isMobileSignedIn) {
+      return <AuthRetryButton onRetry={() => void reloadAuth()} />
+    }
+
+    if (isMobileSignedIn) {
+      return isSignedIn ? (
+        <UserButton
+          afterSignOutUrl="/"
+          appearance={{
+            elements: {
+              avatarBox: "w-8 h-8"
+            }
+          }}
+        />
+      ) : (
+        <AccountMenu
+          label={avatarLabel(currentUser?.name)}
+          mobile={currentUserPhone}
+          onSignOut={() => signOut()}
+        />
+      )
+    }
+
+    return (
+      <SignInButton mode="modal">
+        <button className={loginClassName}>
+          Login
+        </button>
+      </SignInButton>
+    )
+  }
+
   return (
     <header className="bg-white shadow-sm fixed w-full top-0 z-50">
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -238,33 +289,7 @@ function Navbar() {
 
               {/* Auth Button - Fixed width container to prevent layout shift */}
               <div className="ml-4 w-10 h-10 flex items-center justify-center">
-                {!isAuthLoaded ? (
-                  // Skeleton placeholder while mobile auth loads
-                  <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
-                ) : isMobileSignedIn ? (
-                  isSignedIn ? (
-                    <UserButton
-                      afterSignOutUrl="/"
-                      appearance={{
-                        elements: {
-                          avatarBox: "w-8 h-8"
-                        }
-                      }}
-                    />
-                  ) : (
-                    <AccountMenu
-                      label={avatarLabel(currentUser?.name)}
-                      mobile={currentUserPhone}
-                      onSignOut={() => signOut()}
-                    />
-                  )
-                ) : (
-                  <SignInButton mode="modal">
-                    <button className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium">
-                      Login
-                    </button>
-                  </SignInButton>
-                )}
+                {renderAuthControl("bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium")}
               </div>
             </div>
 
@@ -272,32 +297,7 @@ function Navbar() {
             <div className="md:hidden flex items-center space-x-4">
               {/* Auth Button for Mobile - Fixed width */}
               <div className="w-10 h-10 flex items-center justify-center">
-                {!isAuthLoaded ? (
-                  <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
-                ) : isMobileSignedIn ? (
-                  isSignedIn ? (
-                    <UserButton
-                      afterSignOutUrl="/"
-                      appearance={{
-                        elements: {
-                          avatarBox: "w-8 h-8"
-                        }
-                      }}
-                    />
-                  ) : (
-                    <AccountMenu
-                      label={avatarLabel(currentUser?.name)}
-                      mobile={currentUserPhone}
-                      onSignOut={() => signOut()}
-                    />
-                  )
-                ) : (
-                  <SignInButton mode="modal">
-                    <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium text-sm">
-                      Login
-                    </button>
-                  </SignInButton>
-                )}
+                {renderAuthControl("bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium text-sm")}
               </div>
 
               <button
