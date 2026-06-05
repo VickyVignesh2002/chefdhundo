@@ -2,46 +2,15 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { useUser } from '@clerk/nextjs'
-import { SignedIn, SignedOut, SignInButton } from '@clerk/nextjs'
+import { useUser } from '@/lib/auth/client'
+import { SignedIn, SignedOut, SignInButton } from '@/lib/auth/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
-/**
- * WHY THIS PAGE WAS FIXED
- * ───────────────────────
- * Root cause of "claim never runs":
- *
- * Previously, `SignInButton` used `mode="modal"`. After the user signed up
- * in the Clerk modal, Clerk immediately navigated to the configured
- * NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL (/dashboard). This happened
- * BEFORE the `useEffect` that calls `handleClaimResume()` could complete its
- * async fetch to `/api/resumes/claim`. The page unmounted, the fetch was
- * abandoned, and the claim never reached the server.
- *
- * On the dashboard, the localStorage `claim_token` WAS present, and the
- * dashboard's pending-claim effect DID fire — but `auth()` on the server
- * returned `null` because the brand-new Clerk session cookie had not yet
- * propagated to the server for that request, causing a 401.
- *
- * Fix:
- *   Use `mode="redirect"` on SignInButton with `afterSignUpUrl` and
- *   `afterSignInUrl` both pointing back to the SAME claim page
- *   (/claim/<token>). This way:
- *     1. The user signs up in Clerk's hosted UI (full page redirect)
- *     2. Clerk redirects back to /claim/<token> with a fully established
- *        session cookie — the server will see auth() correctly
- *     3. The claim page's useEffect fires with user set
- *     4. handleClaimResume() runs, the fetch completes successfully
- *     5. On success, router.push('/dashboard') redirects to the dashboard
- *        with a fully claimed and linked resume
- *
- *   We also guard against double-firing with `claimAttempted` ref so the
- *   claim API is called exactly once per page mount.
- */
-
+// The claim token is stored locally only as a redirect safety net. The server
+// still validates that the signed-in mobile number owns the resume phone.
 interface ClaimResponse {
   success: boolean
   message?: string
@@ -100,7 +69,6 @@ export default function ClaimPage() {
     }
 
     setIsLoading(true)
-    console.log('[ClaimPage] Calling /api/resumes/claim with token:', token)
 
     try {
       const response = await fetch('/api/resumes/claim', {
@@ -112,7 +80,6 @@ export default function ClaimPage() {
       })
 
       const data: ClaimResponse = await response.json()
-      console.log('[ClaimPage] Claim API response:', response.status, data)
 
       if (!response.ok) {
         setClaimStatus('error')
@@ -130,7 +97,6 @@ export default function ClaimPage() {
         setMessage(`Resume claimed successfully! Welcome, ${data.data?.name || 'Chef'}!`)
         toast.success('Resume claimed successfully!')
 
-        console.log('[ClaimPage] Claim succeeded, redirecting to dashboard...')
 
         // Give the user a moment to see the success state, then navigate.
         setTimeout(() => {

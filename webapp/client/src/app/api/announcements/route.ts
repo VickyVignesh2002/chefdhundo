@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { getUserByClerkId } from '@/lib/supabase/database';
+import { auth } from '@/lib/auth/server';
+import { getUserByIdentityId } from '@/lib/supabase/database';
 import { createSupabaseAdminClient } from '@/lib/supabase/supabase';
 
 // Cache configuration for announcements
@@ -11,7 +11,7 @@ async function isAdminRequest() {
   const { userId } = await auth();
   if (!userId) return false;
 
-  const user = await getUserByClerkId(userId);
+  const user = await getUserByIdentityId(userId);
   return user.success && user.data?.role === 'admin';
 }
 
@@ -28,20 +28,20 @@ export async function GET(request: Request) {
         { status: 403 }
       );
     }
-    
+
     const supabase = createSupabaseAdminClient();
-    
+
     let query = supabase
       .from('announcements')
       .select('*')
       .order('priority', { ascending: false })
       .order('created_at', { ascending: false });
-    
+
     // Filter by status if provided
     if (status && ['active', 'scheduled', 'expired', 'draft'].includes(status)) {
       query = query.eq('status', status);
     }
-    
+
     // If activeOnly, filter by date range and active status
     if (activeOnly) {
       const now = new Date().toISOString();
@@ -50,9 +50,9 @@ export async function GET(request: Request) {
         .lte('start_date', now)
         .or(`end_date.is.null,end_date.gte.${now}`);
     }
-    
+
     const { data, error } = await query;
-    
+
     if (error) {
       console.error('Error fetching announcements:', error);
 
@@ -68,12 +68,12 @@ export async function GET(request: Request) {
         { status: 400 }
       );
     }
-    
+
     const response = NextResponse.json({
       success: true,
       data: data || []
     });
-    
+
     // Add cache headers for announcements
     response.headers.set('Cache-Control', `public, s-maxage=${CACHE_MAX_AGE}, stale-while-revalidate=${STALE_WHILE_REVALIDATE}`);
     return response;
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    
+
     // Validate required fields
     if (!body.title || !body.message || !body.type) {
       return NextResponse.json(
@@ -105,9 +105,9 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    
+
     const supabase = createSupabaseAdminClient();
-    
+
     // Prepare announcement data with defaults
     const announcementData = {
       type: body.type,
@@ -126,13 +126,13 @@ export async function POST(request: Request) {
       text_color: body.text_color || null,
       themed: body.themed !== undefined ? body.themed : false,
     };
-    
+
     const { data, error } = await supabase
       .from('announcements')
       .insert([announcementData])
       .select()
       .single();
-    
+
     if (error) {
       console.error('Error creating announcement:', error);
       return NextResponse.json(
@@ -140,7 +140,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    
+
     return NextResponse.json({
       success: true,
       data,

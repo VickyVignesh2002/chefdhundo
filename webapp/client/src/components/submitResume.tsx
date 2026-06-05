@@ -45,7 +45,7 @@ interface ResumeFormData {
   name: string;
   mobile: string;
   city: string;
-  
+
   // Step 2 - Core Professional Info
   profession: string;
   professionOther: string; // Used when profession is 'Others'
@@ -53,7 +53,7 @@ interface ResumeFormData {
   cuisines: string;
   current_ctc: number | ''; // Changed to number for type safety
   expected_ctc: number | ''; // Changed to number for type safety
-  
+
   // Step 3 - Work Preferences & Consent
   work_type: JobType;
   joining: JoiningType;
@@ -79,17 +79,14 @@ export function SubmitResume() {
 
   React.useEffect(() => {
     if (currentUser?.id && !hasFetchedResumes.current) {
-      console.log("CURRENT USER ID:", currentUser.id);
-      console.log("FETCHING RESUME WITH user_id");
-      hasFetchedResumes.current = true;
+                  hasFetchedResumes.current = true;
       fetchResumesByUserId(currentUser.id);
     }
   }, [currentUser?.id, fetchResumesByUserId]);
 
   React.useEffect(() => {
     if (hasFetchedResumes.current) {
-      console.log("RESUME RESULT:", resumes);
-    }
+          }
   }, [resumes]);
 
   const hasResume = resumes.length > 0;
@@ -99,7 +96,7 @@ export function SubmitResume() {
     name: '',
     mobile: '',
     city: '',
-    
+
     // Step 2 - Core Professional Info
     profession: '',
     professionOther: '',
@@ -107,7 +104,7 @@ export function SubmitResume() {
     cuisines: '',
     current_ctc: '', // Start as empty string, convert to number on input
     expected_ctc: '', // Start as empty string, convert to number on input
-    
+
     // Step 3 - Work Preferences & Consent
     work_type: 'full',
     joining: 'immediate',
@@ -125,7 +122,7 @@ export function SubmitResume() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value, type, checked } = e.target as HTMLInputElement;
-    
+
     // Special handling for mobile number - only allow 10 digits
     if (id === 'mobile') {
       const numericValue = value.replace(/\D/g, ''); // Remove all non-digit characters
@@ -134,7 +131,7 @@ export function SubmitResume() {
       }
       return;
     }
-    
+
     // Handle numeric fields with proper validation
     if (id === 'experience_years' || id === 'current_ctc' || id === 'expected_ctc') {
       if (value === '') {
@@ -148,10 +145,10 @@ export function SubmitResume() {
       }
       return;
     }
-    
-    setResumeForm((prev: ResumeFormData) => ({ 
-      ...prev, 
-      [id]: type === 'checkbox' ? checked : value 
+
+    setResumeForm((prev: ResumeFormData) => ({
+      ...prev,
+      [id]: type === 'checkbox' ? checked : value
     }));
   };
 
@@ -184,19 +181,19 @@ export function SubmitResume() {
 
   const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    
+
     // Validate step 3
     if (!resumeForm.candidateConsent) {
       toast.error('Please provide candidate consent');
       return;
     }
-    
+
     // Check if user is authenticated
     if (!currentUser) {
       toast.error('Please log in to submit your resume');
       return;
     }
-    
+
     try {
       // Prepare resume data for Supabase with essential fields
       const resumeData = {
@@ -235,21 +232,21 @@ export function SubmitResume() {
         claimed: true,
         claim_token: null,
       };
-      
+
       // Save to Supabase database
       await createResume(resumeData);
 
       if (currentUser.chef !== 'yes') {
         await updateUser(currentUser.clerk_user_id, { chef: 'yes' });
       }
-      
+
       toast.success('Resume submitted successfully!', {
         description: 'We have received your details and will get back to you shortly.',
       });
-      
+
       // Redirect to dashboard
       router.push('/dashboard');
-      
+
     } catch (error) {
       console.error('Error submitting resume:', error);
       toast.error('Failed to submit resume. Please try again.');
@@ -292,24 +289,24 @@ export function SubmitResume() {
     >
       <div className="space-y-2">
         <Label htmlFor="name">Full Name / पूरा नाम *</Label>
-        <Input 
-          id="name" 
-          type="text" 
-          required 
-          placeholder="Enter your full name" 
-          value={resumeForm.name} 
-          onChange={handleInputChange} 
+        <Input
+          id="name"
+          type="text"
+          required
+          placeholder="Enter your full name"
+          value={resumeForm.name}
+          onChange={handleInputChange}
         />
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="mobile">Mobile No. *</Label>
-        <Input 
-          id="mobile" 
-          type="tel" 
-          required 
-          placeholder="+919876543210" 
-          value={resumeForm.mobile} 
+        <Input
+          id="mobile"
+          type="tel"
+          required
+          placeholder="+919876543210"
+          value={resumeForm.mobile}
           onChange={handleInputChange}
           readOnly
           disabled
@@ -317,7 +314,7 @@ export function SubmitResume() {
         />
         <p className="text-xs text-gray-500">Using your logged-in mobile number</p>
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="city">City / शहर *</Label>
         <Select value={resumeForm.city} onValueChange={(value) => handleSelectChange('city', value)}>
@@ -331,13 +328,13 @@ export function SubmitResume() {
           </SelectContent>
         </Select>
       </div>
-      
+
       <motion.div
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
       >
-        <Button 
-          type="button" 
+        <Button
+          type="button"
           onClick={handleNext}
           className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-md text-lg transition-colors shadow-md"
         >
@@ -375,12 +372,12 @@ export function SubmitResume() {
 
         <div className="space-y-2">
           <Label htmlFor="experience_years">Total Experience (Years) / कुल अनुभव (वर्ष) *</Label>
-          <Input 
-            id="experience_years" 
-            type="number" 
-            required 
-            placeholder="5" 
-            value={resumeForm.experience_years} 
+          <Input
+            id="experience_years"
+            type="number"
+            required
+            placeholder="5"
+            value={resumeForm.experience_years}
             onChange={handleInputChange}
             min="0"
             max="50"
@@ -391,37 +388,37 @@ export function SubmitResume() {
       {resumeForm.profession === 'Others' && (
         <div className="space-y-2">
           <Label htmlFor="professionOther">Please specify your profession *</Label>
-          <Input 
-            id="professionOther" 
-            type="text" 
-            required 
-            placeholder="Enter your profession" 
-            value={resumeForm.professionOther} 
-            onChange={handleInputChange} 
+          <Input
+            id="professionOther"
+            type="text"
+            required
+            placeholder="Enter your profession"
+            value={resumeForm.professionOther}
+            onChange={handleInputChange}
           />
         </div>
       )}
-      
+
       <div className="space-y-2">
         <Label htmlFor="cuisines">Cuisines You Know / आप जानते हैं कुजीन *</Label>
-        <Input 
-          id="cuisines" 
-          type="text" 
-          required 
-          placeholder="Indian, Chinese, Continental, Italian" 
-          value={resumeForm.cuisines} 
-          onChange={handleInputChange} 
+        <Input
+          id="cuisines"
+          type="text"
+          required
+          placeholder="Indian, Chinese, Continental, Italian"
+          value={resumeForm.cuisines}
+          onChange={handleInputChange}
         />
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="current_ctc">Current Salary / वर्तमान वेतन</Label>
-          <Input 
-            id="current_ctc" 
-            type="number" 
-            placeholder="25000" 
-            value={resumeForm.current_ctc} 
+          <Input
+            id="current_ctc"
+            type="number"
+            placeholder="25000"
+            value={resumeForm.current_ctc}
             onChange={handleInputChange}
             min="0"
             max="10000000"
@@ -431,11 +428,11 @@ export function SubmitResume() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="expected_ctc">Expected Salary / अपेक्षित वेतन</Label>
-          <Input 
-            id="expected_ctc" 
-            type="number" 
-            placeholder="35000" 
-            value={resumeForm.expected_ctc} 
+          <Input
+            id="expected_ctc"
+            type="number"
+            placeholder="35000"
+            value={resumeForm.expected_ctc}
             onChange={handleInputChange}
             min="0"
             max="10000000"
@@ -444,15 +441,15 @@ export function SubmitResume() {
           <p className="text-xs text-gray-500">Enter amount in ₹ (e.g., 35000)</p>
         </div>
       </div>
-      
+
       <div className="flex gap-4">
         <motion.div
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           className="flex-1"
         >
-          <Button 
-            type="button" 
+          <Button
+            type="button"
             onClick={() => setCurrentStep(1)}
             variant="outline"
             className="w-full py-3 px-4 rounded-md text-lg transition-colors"
@@ -465,8 +462,8 @@ export function SubmitResume() {
           whileTap={{ scale: 0.98 }}
           className="flex-1"
         >
-          <Button 
-            type="button" 
+          <Button
+            type="button"
             onClick={handleNext}
             className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-md text-lg transition-colors shadow-md"
           >
@@ -531,13 +528,13 @@ export function SubmitResume() {
 
       <div className="space-y-4">
         <div className="flex items-center space-x-2 p-4 bg-orange-50 rounded-lg">
-          <Checkbox 
-            id="candidateConsent" 
+          <Checkbox
+            id="candidateConsent"
             checked={resumeForm.candidateConsent}
             onCheckedChange={(checked) => setResumeForm(prev => ({ ...prev, candidateConsent: checked as boolean }))}
           />
           <Label htmlFor="candidateConsent" className="text-sm">
-            I agree that ChefDhundo can share my profile with potential employers and contact me regarding job opportunities. / 
+            I agree that ChefDhundo can share my profile with potential employers and contact me regarding job opportunities. /
             मैं सहमत हूँ कि ChefDhundo मेरी प्रोफ़ाइल को संभावित नियोक्ताओं के साथ साझा कर सकता है।
           </Label>
         </div>
@@ -549,8 +546,8 @@ export function SubmitResume() {
           whileTap={{ scale: 0.98 }}
           className="flex-1"
         >
-          <Button 
-            type="button" 
+          <Button
+            type="button"
             onClick={() => setCurrentStep(2)}
             variant="outline"
             className="w-full py-3 px-4 rounded-md text-lg transition-colors"
@@ -563,7 +560,7 @@ export function SubmitResume() {
           whileTap={{ scale: 0.98 }}
           className="flex-1"
         >
-          <Button 
+          <Button
             type="submit"
             onClick={handleSubmit}
             disabled={!resumeForm.candidateConsent || isLoading}
@@ -606,7 +603,7 @@ export function SubmitResume() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <Button 
+              <Button
                 onClick={() => router.push('/dashboard')}
                 className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-md text-lg transition-colors shadow-md"
               >
@@ -633,7 +630,7 @@ export function SubmitResume() {
               ))}
             </div>
           </div>
-          
+
           <AnimatePresence mode="wait">
             {currentStep === 1 && renderStep1()}
             {currentStep === 2 && renderStep2()}

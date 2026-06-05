@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   AUTH_COOKIE_NAME,
+  authCookieOptions,
   createLoginToken,
   normalizeIndianPhone,
   verifyOtp,
@@ -38,17 +39,11 @@ export async function POST(req: Request) {
       },
     });
 
-    const forwardedProto = req.headers.get("x-forwarded-proto");
-    const isHttpsRequest =
-      forwardedProto === "https" || new URL(req.url).protocol === "https:";
-
-    response.cookies.set(AUTH_COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production" && isHttpsRequest,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 7 * 24 * 60 * 60,
-    });
+    response.cookies.set(
+      AUTH_COOKIE_NAME,
+      token,
+      authCookieOptions(process.env.NODE_ENV === "production")
+    );
 
     return response;
   } catch (error) {

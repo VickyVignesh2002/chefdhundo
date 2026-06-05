@@ -6,12 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { 
-  ChefHat, 
-  MapPin, 
+import {
+  ChefHat,
+  MapPin,
   Phone,
-  Calendar, 
-  DollarSign, 
+  Calendar,
+  DollarSign,
   Star,
   Users,
   FileText,
@@ -52,7 +52,7 @@ interface ChefDashboardProps {
 export function ChefDashboard({ currentUser }: ChefDashboardProps) {
   const [chefs, setChefs] = useState<ChefProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Get users and resumes from Supabase stores
   const { fetchAllUsers, users } = useSupabaseUserStore();
   const { fetchAllResumes, resumes } = useSupabaseResumeStore();
@@ -78,18 +78,14 @@ export function ChefDashboard({ currentUser }: ChefDashboardProps) {
       const user = users.find(u => u.id === resume.user_id);
       return user?.chef === 'yes';
     }).map(resume => resume as ChefProfile);
-    
+
     setChefs(combinedChefs);
   }, [users, resumes]);
 
   // Log current user data when available
   useEffect(() => {
     if (currentUser) {
-      console.log('👤 Current user data in ChefDashboard:', {
-        name: currentUser.name,
-        role: currentUser.role
-      });
-    }
+          }
   }, [currentUser]);
 
   const getExperienceColor = (years: string) => {
@@ -198,7 +194,7 @@ export function ChefDashboard({ currentUser }: ChefDashboardProps) {
                             {chef.totalExperienceYears || '0'} Years Experience
                           </Badge>
                           <Badge className={getJobTypeColor(chef.jobType || '')}>
-                            {chef.jobType === 'full' ? 'Full-time' : 
+                            {chef.jobType === 'full' ? 'Full-time' :
                              chef.jobType === 'part' ? 'Part-time' : 'Contract'}
                           </Badge>
                         </div>

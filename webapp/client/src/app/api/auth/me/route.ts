@@ -10,6 +10,9 @@ export async function GET() {
     });
   } catch (error) {
     console.error("auth me error:", error);
-    return NextResponse.json({ isSignedIn: false, user: null }, { status: 200 });
+    return NextResponse.json(
+      { isSignedIn: false, user: null, error: "Unable to load session" },
+      { status: 503 }
+    );
   }
 }

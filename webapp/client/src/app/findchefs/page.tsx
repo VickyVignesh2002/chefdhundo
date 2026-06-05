@@ -29,7 +29,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { useAuth, SignInButton } from "@clerk/nextjs";
+import { useAuth, SignInButton } from "@/lib/auth/client";
 import { toast } from "sonner";
 import {
   useSupabaseResumeStore,
@@ -79,13 +79,13 @@ const ChefCardSkeleton = () => (
 function FindChefPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  
+
   // Get initial values from URL params
   const initialPage = parseInt(searchParams.get('page') || '1', 10);
   const initialSearch = searchParams.get('search') || '';
   const initialExperience = searchParams.get('experience') || 'all';
   const initialProfession = searchParams.get('profession') || 'all';
-  
+
   const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [experienceFilter, setExperienceFilter] = useState<string>(initialExperience);
@@ -94,7 +94,7 @@ function FindChefPage() {
   const [itemsPerPage] = useState(12);
   const [selectedResume, setSelectedResume] = useState<Resume | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+
   const { isSignedIn, isLoaded } = useAuth();
   const currentUser = useSupabaseCurrentUser();
   const userRole = currentUser?.role || 'basic';
@@ -122,7 +122,7 @@ function FindChefPage() {
     if (search) params.set('search', search);
     if (experience !== 'all') params.set('experience', experience);
     if (profession !== 'all') params.set('profession', profession);
-    
+
     const queryString = params.toString();
     const newURL = queryString ? `?${queryString}` : '/findchefs';
     router.replace(newURL, { scroll: false });
@@ -131,8 +131,7 @@ function FindChefPage() {
   // Fetch resumes when filters change (server-side pagination)
   useEffect(() => {
     if (isSignedIn && isLoaded) {
-      console.log('🔍 Fetching paginated resumes...', { currentPage, debouncedSearch, experienceFilter, professionFilter });
-      
+
       fetchResumesPaginated({
         page: currentPage,
         limit: itemsPerPage,
@@ -140,7 +139,7 @@ function FindChefPage() {
         experience: experienceFilter,
         profession: professionFilter
       });
-      
+
       updateURL(currentPage, debouncedSearch, experienceFilter, professionFilter);
     }
   }, [isSignedIn, isLoaded, currentPage, debouncedSearch, experienceFilter, professionFilter, fetchResumesPaginated, itemsPerPage, updateURL]);
@@ -156,11 +155,11 @@ function FindChefPage() {
   const prevFiltersRef = React.useRef({ search: debouncedSearch, experience: experienceFilter, profession: professionFilter });
   useEffect(() => {
     const prev = prevFiltersRef.current;
-    const filtersChanged = 
-      prev.search !== debouncedSearch || 
-      prev.experience !== experienceFilter || 
+    const filtersChanged =
+      prev.search !== debouncedSearch ||
+      prev.experience !== experienceFilter ||
       prev.profession !== professionFilter;
-    
+
     if (filtersChanged && currentPage !== 1) {
       setCurrentPage(1);
     }
@@ -195,7 +194,7 @@ function FindChefPage() {
       toast.error("No resume data available");
       return;
     }
-    
+
     // Prepare data for the resume template
     const resumeData = {
       name: resume.name || 'Chef Name',
@@ -221,7 +220,7 @@ function FindChefPage() {
     // Store data in localStorage and navigate to static chef page
     localStorage.setItem('chefResumeData', JSON.stringify(resumeData));
     router.push('/chef');
-    
+
     // Close modal
     closeModal();
   };
@@ -294,7 +293,7 @@ function FindChefPage() {
     return items;
   }, [totalPages, currentPage]);
 
-  // Show loading state while Clerk is loading
+  // Show loading state while mobile auth is loading
   if (!isLoaded) {
     return (
       <div className="bg-white min-h-screen flex items-center justify-center">
@@ -609,7 +608,7 @@ function FindChefPage() {
                         }}
                         onClick={() => handleCardClick(resume)}
                       >
-                        <Card 
+                        <Card
                           className={`h-full flex flex-col border rounded-lg overflow-hidden ${
                             (currentUser?.role === "pro" || currentUser?.role === "admin") ? "cursor-pointer hover:shadow-lg transition-all duration-200" : ""
                           }`}
@@ -789,7 +788,7 @@ function FindChefPage() {
                 Complete resume details and contact information
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="space-y-8 py-4">
               {/* Basic Information - Two Column Layout */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -840,7 +839,7 @@ function FindChefPage() {
                     )}
                   </div>
                 </div>
-                
+
                 {/* Professional Details */}
                 <div className="bg-gray-50 p-6 rounded-lg">
                   <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -1001,7 +1000,7 @@ function FindChefPage() {
                 <Button variant="outline" onClick={closeModal} className="px-6 py-2">
                   Close
                 </Button>
-                <Button 
+                <Button
                   onClick={() => viewResume(selectedResume)}
                   className="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white"
                 >
@@ -1010,7 +1009,7 @@ function FindChefPage() {
                   </svg>
                   Get Chef Dhundo Resume
                 </Button>
-                <Button 
+                <Button
                   onClick={() => {
                     // Handle contact action
                     toast.success("Contact information copied to clipboard");

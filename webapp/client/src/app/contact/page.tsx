@@ -30,11 +30,10 @@ export default function ContactPage() {
 
     try {
       // Here you would typically send the form data to your backend
-      console.log('Contact form submitted:', formData);
-      
+
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       toast.success('Thank you for your message! We will get back to you soon.');
       setFormData({ name: '', phone: '', subject: '', message: '' });
     } catch {

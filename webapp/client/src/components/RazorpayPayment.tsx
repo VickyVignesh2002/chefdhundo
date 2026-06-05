@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useUser } from "@clerk/nextjs";
+import { useUser } from "@/lib/auth/client";
 import Script from "next/script";
 
 interface RazorpaySuccessResponse {
@@ -60,9 +60,6 @@ interface RazorpayOptions {
   prefill: {
     name: string;
     contact: string;
-  };
-  hidden: {
-    email: boolean;
   };
   notes: {
     address: string;
@@ -174,9 +171,6 @@ const RazorpayPayment: React.FC<RazorpayPaymentProps> = ({
         prefill: {
           name: data.customerName,
           contact: data.customerPhone,
-        },
-        hidden: {
-          email: true,
         },
         notes: {
           address: "Chef Dhundo Corporate Office",

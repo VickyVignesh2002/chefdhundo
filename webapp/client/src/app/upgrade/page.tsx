@@ -141,8 +141,7 @@ function UpgradePage() {
     setIsDialogOpen(true);
   };
 
-  const handlePaymentSuccess = (response: unknown) => {
-    console.log("Payment successful:", response);
+  const handlePaymentSuccess = () => {
     toast.success("Welcome to Pro! Your account has been upgraded.");
     setIsDialogOpen(false);
     setTimeout(() => {

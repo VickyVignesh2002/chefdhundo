@@ -2,22 +2,22 @@
 
 import React, {
   cloneElement,
+  createContext,
   isValidElement,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
+  useReducer,
   useState,
 } from "react";
 
-type CompatUser = {
+export type MobileAuthUser = {
   id: string;
   fullName: string | null;
   firstName: string | null;
   lastName: string | null;
   imageUrl: string | null;
-  primaryEmailAddressId: string;
-  primaryEmailAddress: { id: string; emailAddress: string };
-  emailAddresses: { id: string; emailAddress: string }[];
   primaryPhoneNumber: { id: string; phoneNumber: string } | null;
   primaryPhoneNumberId: string | null;
   publicMetadata: { role: "basic" | "pro" | "admin" };
@@ -25,10 +25,71 @@ type CompatUser = {
   reload: () => Promise<void>;
 };
 
+export type CompatUser = MobileAuthUser;
+
 type MeResponse = {
   isSignedIn: boolean;
-  user: Omit<CompatUser, "reload"> | null;
+  user: Omit<MobileAuthUser, "reload"> | null;
 };
+
+export type MobileAuthStatus =
+  | "loading"
+  | "authenticated"
+  | "unauthenticated"
+  | "error";
+
+export type MobileAuthState = {
+  status: MobileAuthStatus;
+  user: MobileAuthUser | null;
+  error: Error | null;
+};
+
+type MobileAuthAction =
+  | { type: "authenticated"; user: MobileAuthUser }
+  | { type: "unauthenticated" }
+  | { type: "error"; error: Error };
+
+type MobileAuthContextValue = MobileAuthState & {
+  reload: () => Promise<void>;
+};
+
+const MobileAuthContext = createContext<MobileAuthContextValue | null>(null);
+
+export function createInitialAuthState(
+  user: MobileAuthUser | null,
+): MobileAuthState {
+  return {
+    status: user ? "authenticated" : "loading",
+    user,
+    error: null,
+  };
+}
+
+export function authStateReducer(
+  state: MobileAuthState,
+  action: MobileAuthAction,
+): MobileAuthState {
+  switch (action.type) {
+    case "authenticated":
+      return {
+        status: "authenticated",
+        user: action.user,
+        error: null,
+      };
+    case "unauthenticated":
+      return {
+        status: "unauthenticated",
+        user: null,
+        error: null,
+      };
+    case "error":
+      return {
+        status: "error",
+        user: state.user,
+        error: action.error,
+      };
+  }
+}
 
 function goToSignIn() {
   window.location.href = "/sign-in";
@@ -40,36 +101,55 @@ function initials(name?: string | null) {
   return `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase() || "U";
 }
 
-export function ClerkProvider({
-  children,
-}: {
-  children: React.ReactNode;
-  publishableKey?: string;
-}) {
-  return <>{children}</>;
+function toCompatUser(
+  user: Omit<MobileAuthUser, "reload">,
+  reload: () => Promise<void>,
+): MobileAuthUser {
+  return {
+    ...user,
+    reload,
+  };
 }
 
-function useMe() {
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [user, setUser] = useState<CompatUser | null>(null);
+function toError(error: unknown) {
+  return error instanceof Error ? error : new Error("Unable to load session");
+}
+
+export function MobileAuthProvider({
+  children,
+  initialUser = null,
+}: {
+  children: React.ReactNode;
+  initialUser?: Omit<MobileAuthUser, "reload"> | null;
+}) {
+  const [state, dispatch] = useReducer(
+    authStateReducer,
+    initialUser
+      ? createInitialAuthState(
+          toCompatUser(initialUser, async () => undefined),
+        )
+      : createInitialAuthState(null),
+  );
 
   const load = useCallback(async () => {
     try {
       const res = await fetch("/api/auth/me", { cache: "no-store" });
+      if (!res.ok) {
+        throw new Error(`Unable to load session (${res.status})`);
+      }
+
       const data: MeResponse = await res.json();
       if (!data?.isSignedIn || !data.user) {
-        setUser(null);
+        dispatch({ type: "unauthenticated" });
         return;
       }
 
-      setUser({
-        ...data.user,
-        reload: load,
+      dispatch({
+        type: "authenticated",
+        user: toCompatUser(data.user, load),
       });
-    } catch {
-      setUser(null);
-    } finally {
-      setIsLoaded(true);
+    } catch (error) {
+      dispatch({ type: "error", error: toError(error) });
     }
   }, []);
 
@@ -77,20 +157,43 @@ function useMe() {
     void load();
   }, [load]);
 
-  return { isLoaded, user, reload: load };
+  const value = useMemo<MobileAuthContextValue>(
+    () => ({
+      ...state,
+      user: state.user ? { ...state.user, reload: load } : null,
+      reload: load,
+    }),
+    [load, state],
+  );
+
+  return (
+    <MobileAuthContext.Provider value={value}>
+      {children}
+    </MobileAuthContext.Provider>
+  );
+}
+
+export function useMobileAuth() {
+  const context = useContext(MobileAuthContext);
+  if (!context) {
+    throw new Error("useMobileAuth must be used within MobileAuthProvider");
+  }
+  return context;
 }
 
 export function useUser() {
-  const { isLoaded, user } = useMe();
+  const { status, user, error } = useMobileAuth();
   return {
-    isLoaded,
+    isLoaded: status !== "loading",
     isSignedIn: !!user,
     user,
+    error,
+    status,
   };
 }
 
 export function useAuth() {
-  const { isLoaded, user, reload } = useMe();
+  const { status, user, error, reload } = useMobileAuth();
 
   const signOut = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -99,11 +202,13 @@ export function useAuth() {
   }, [reload]);
 
   return {
-    isLoaded,
+    isLoaded: status !== "loading",
     isSignedIn: !!user,
     userId: user?.id ?? null,
     getToken: async () => null,
     signOut,
+    error,
+    status,
   };
 }
 
@@ -148,8 +253,8 @@ export function SignedIn({ children }: { children: React.ReactNode }) {
 }
 
 export function SignedOut({ children }: { children: React.ReactNode }) {
-  const { isSignedIn } = useAuth();
-  return isSignedIn ? null : <>{children}</>;
+  const { status } = useMobileAuth();
+  return status === "unauthenticated" ? <>{children}</> : null;
 }
 
 export function UserButton({

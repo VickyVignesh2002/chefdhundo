@@ -3,10 +3,10 @@
 import React, { useState, useEffect, useCallback, memo, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useAuth, SignInButton, UserButton } from '@clerk/nextjs'
-import { 
-  useSupabaseCurrentUser, 
-  useSupabaseUserLoading, 
+import { useAuth, SignInButton, UserButton } from '@/lib/auth/client'
+import {
+  useSupabaseCurrentUser,
+  useSupabaseUserLoading,
   useSupabaseUserError,
   useSupabaseUserLoaded,
   useSupabaseIsAdmin,
@@ -75,11 +75,11 @@ function avatarLabel(name?: string | null) {
 
 function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const { isSignedIn, isLoaded: isClerkLoaded, signOut } = useAuth()
-  
+  const { isSignedIn, isLoaded: isAuthLoaded, signOut } = useAuth()
+
   // Track if we've ever loaded to prevent flicker on navigation
   const hasEverLoaded = useRef(false)
-  
+
   // Supabase user store hooks - user is pre-loaded from server via AuthProvider
   const currentUser = useSupabaseCurrentUser()
   const currentUserPhone = currentUser?.clerk_user_id?.startsWith('phone:')
@@ -96,42 +96,42 @@ function Navbar() {
 
   // Once loaded, remember it to prevent re-showing loading state on navigation
   useEffect(() => {
-    if (isClerkLoaded && isUserLoaded) {
+    if (isAuthLoaded && isUserLoaded) {
       hasEverLoaded.current = true
     }
-  }, [isClerkLoaded, isUserLoaded])
+  }, [isAuthLoaded, isUserLoaded])
 
   // Clear user state when user signs out
   useEffect(() => {
-    if (!isSignedIn && !currentUser && isClerkLoaded) {
+    if (!isSignedIn && !currentUser && isAuthLoaded) {
       clearCurrentUser()
       clearError()
       hasEverLoaded.current = false // Reset on sign out
     }
-  }, [isSignedIn, currentUser, isClerkLoaded, clearCurrentUser, clearError])
+  }, [isSignedIn, currentUser, isAuthLoaded, clearCurrentUser, clearError])
 
   // Memoized user badges calculation - stable after first load
   const userBadges = useMemo(() => {
     // If we've loaded before, don't show loading state on navigation
-    const showLoadingState = !hasEverLoaded.current && (isLoadingUser || !isClerkLoaded)
-    
+    const showLoadingState = !hasEverLoaded.current && (isLoadingUser || !isAuthLoaded)
+
     if (!isMobileSignedIn) return []
-    
+
     if (showLoadingState) {
       return [{ text: 'Loading...', color: 'bg-gray-100 text-gray-600' }]
     }
-    
+
     if (userError) {
       return [{ text: 'Error', color: 'bg-red-100 text-red-800' }]
     }
-    
+
     if (!currentUser && isUserLoaded) {
       return [{ text: 'Mobile Account', color: 'bg-blue-100 text-blue-800' }]
     }
-    
+
     if (currentUser) {
       const badges = []
-      
+
       // Role badge (admin has own badge and is pro-equivalent)
       if (currentUser.role === 'admin') {
         badges.push({
@@ -141,8 +141,8 @@ function Navbar() {
       } else {
         badges.push({
           text: currentUser.role === 'pro' ? 'Pro ⚡' : 'Basic ⚪',
-          color: currentUser.role === 'pro' 
-            ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' 
+          color: currentUser.role === 'pro'
+            ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
             : 'bg-blue-100 text-blue-800'
         })
       }
@@ -159,12 +159,12 @@ function Navbar() {
           color: 'bg-purple-100 text-purple-800 border border-purple-300'
         })
       }
-      
+
       return badges
     }
-    
+
     return []
-  }, [isMobileSignedIn, isLoadingUser, userError, currentUser, isUserLoaded, isClerkLoaded])
+  }, [isMobileSignedIn, isLoadingUser, userError, currentUser, isUserLoaded, isAuthLoaded])
 
   const toggleMobileMenu = useCallback(() => {
     setIsMobileMenuOpen(prev => !prev)
@@ -181,7 +181,7 @@ function Navbar() {
     { href: "/dashboard", text: "Dashboard", primary: false, prefetch: false, fullReload: true },
   ], [])
 
-  const displayLinks = useMemo(() => 
+  const displayLinks = useMemo(() =>
     isAdminUser ? [...navLinks, { href: "/admin", text: "Admin", primary: false, prefetch: false, fullReload: true }] : navLinks
   , [isAdminUser, navLinks])
 
@@ -203,7 +203,7 @@ function Navbar() {
                  <span className="ml-3 text-xl font-semibold text-gray-900">Chef Dhundho</span>
                </Link>
             </div>
-            
+
             {/* Desktop Menu */}
              <div className="hidden md:flex items-center space-x-8">
               {displayLinks.map((link) => (
@@ -226,7 +226,7 @@ function Navbar() {
                   </Link>
                 )
               ))}
-               
+
                                {/* User Badges - Role, Chef Status, Loading, etc. */}
                 {userBadges.length > 0 && (
                   <div className="flex items-center space-x-2">
@@ -235,15 +235,15 @@ function Navbar() {
                     ))}
                   </div>
                 )}
-              
+
               {/* Auth Button - Fixed width container to prevent layout shift */}
               <div className="ml-4 w-10 h-10 flex items-center justify-center">
-                {!isClerkLoaded ? (
-                  // Skeleton placeholder while Clerk loads
+                {!isAuthLoaded ? (
+                  // Skeleton placeholder while mobile auth loads
                   <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
                 ) : isMobileSignedIn ? (
                   isSignedIn ? (
-                    <UserButton 
+                    <UserButton
                       afterSignOutUrl="/"
                       appearance={{
                         elements: {
@@ -272,11 +272,11 @@ function Navbar() {
             <div className="md:hidden flex items-center space-x-4">
               {/* Auth Button for Mobile - Fixed width */}
               <div className="w-10 h-10 flex items-center justify-center">
-                {!isClerkLoaded ? (
+                {!isAuthLoaded ? (
                   <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
                 ) : isMobileSignedIn ? (
                   isSignedIn ? (
-                    <UserButton 
+                    <UserButton
                       afterSignOutUrl="/"
                       appearance={{
                         elements: {
@@ -299,7 +299,7 @@ function Navbar() {
                   </SignInButton>
                 )}
               </div>
-              
+
               <button
                 onClick={toggleMobileMenu}
                 className="text-gray-900 hover:text-gray-700 focus:outline-none focus:text-gray-700"

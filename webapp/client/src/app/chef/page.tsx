@@ -30,24 +30,21 @@ interface ChefResumeData {
 }
 
 export default function ChefResumePage() {
-  console.log('🚀 ChefResumePage: Component is being rendered!');
-  
+
   const router = useRouter();
   const [resumeData, setResumeData] = useState<ChefResumeData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('🔍 ChefResumePage: useEffect triggered');
-    
+
     // Get data from localStorage
     const storedData = localStorage.getItem('chefResumeData');
-    
+
     if (storedData) {
       try {
         const parsedData = JSON.parse(storedData);
-        console.log('🔍 ChefResumePage: Data loaded from localStorage:', parsedData);
-        setResumeData(parsedData);
+                setResumeData(parsedData);
         setIsLoading(false);
       } catch (error) {
         console.error('❌ ChefResumePage: Error parsing stored data:', error);
@@ -55,8 +52,7 @@ export default function ChefResumePage() {
         setIsLoading(false);
       }
     } else {
-      console.log('❌ ChefResumePage: No resume data found in localStorage');
-      setError('No resume data found');
+            setError('No resume data found');
       setIsLoading(false);
     }
   }, []);
@@ -67,7 +63,7 @@ export default function ChefResumePage() {
 
   const handleContact = () => {
     if (!resumeData) return;
-    
+
     if (resumeData.mobile) {
       window.open(`tel:${resumeData.mobile}`, '_blank');
     }
@@ -117,7 +113,7 @@ export default function ChefResumePage() {
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Chef Search
             </Button>
-            
+
             <div className="flex items-center gap-4">
               <h1 className="text-xl font-semibold text-gray-900">
                 {resumeData.name} - Resume
@@ -155,7 +151,7 @@ export default function ChefResumePage() {
                   <p className="font-medium text-gray-900">{resumeData.location}</p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 bg-amber-600 rounded-full"></div>
                 <div>
@@ -165,7 +161,7 @@ export default function ChefResumePage() {
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                 <div>
@@ -173,7 +169,7 @@ export default function ChefResumePage() {
                   <p className="font-medium text-gray-900">{resumeData.jobType}</p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 bg-green-600 rounded-full"></div>
                 <div>
@@ -200,7 +196,7 @@ export default function ChefResumePage() {
                   Use the contact information above to reach out directly
                 </p>
               </div>
-              
+
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
                   onClick={handleBack}
@@ -210,7 +206,7 @@ export default function ChefResumePage() {
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back to Search
                 </Button>
-                
+
                 {resumeData.mobile && (
                   <Button
                     onClick={handleContact}
