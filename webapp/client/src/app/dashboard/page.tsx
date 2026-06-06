@@ -901,10 +901,21 @@ export default function DashboardPage() {
               </Avatar>
             </div> */}
           </div>
+        ) : authUser ? (
+          <div className="mt-6">
+            <p className="text-orange-600">Mobile account is syncing...</p>
+            <p className="text-sm text-gray-500 mb-4">Your login is active. We are loading your dashboard profile.</p>
+            <Button
+              type="button"
+              onClick={() => findAndSetCurrentUserByIdentityId(authUser.id)}
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+            >
+              Retry Dashboard Load
+            </Button>
+          </div>
         ) : isUserLoaded ? (
           <div className="mt-6">
-            <p className="text-orange-600">Mobile account not found in database</p>
-            <p className="text-sm text-gray-500">Please refresh once or sign in again if this continues.</p>
+            <p className="text-orange-600">Please sign in with your mobile number.</p>
           </div>
         ) : (
           <div className="mt-6">

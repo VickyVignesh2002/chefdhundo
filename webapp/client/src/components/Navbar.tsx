@@ -101,7 +101,7 @@ function Navbar() {
     : currentUser?.name?.startsWith('+91')
       ? currentUser.name
       : null
-  const isMobileSignedIn = isSignedIn || !!currentUser
+  const isMobileSignedIn = authStatus === 'authenticated' || !!currentUser
   const isLoadingUser = useSupabaseUserLoading()
   const userError = useSupabaseUserError()
   const isUserLoaded = useSupabaseUserLoaded()
@@ -117,12 +117,12 @@ function Navbar() {
 
   // Clear user state when user signs out
   useEffect(() => {
-    if (!isSignedIn && !currentUser && isAuthLoaded) {
+    if (authStatus === 'unauthenticated' && !currentUser) {
       clearCurrentUser()
       clearError()
       hasEverLoaded.current = false // Reset on sign out
     }
-  }, [isSignedIn, currentUser, isAuthLoaded, clearCurrentUser, clearError])
+  }, [authStatus, currentUser, clearCurrentUser, clearError])
 
   // Memoized user badges calculation - stable after first load
   const userBadges = useMemo(() => {

@@ -133,7 +133,10 @@ export function MobileAuthProvider({
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/auth/me", { cache: "no-store" });
+      const res = await fetch("/api/auth/me", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
       if (!res.ok) {
         throw new Error(`Unable to load session (${res.status})`);
       }
@@ -196,7 +199,10 @@ export function useAuth() {
   const { status, user, error, reload } = useMobileAuth();
 
   const signOut = useCallback(async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "same-origin",
+    });
     await reload();
     window.location.href = "/";
   }, [reload]);

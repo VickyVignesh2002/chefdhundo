@@ -38,6 +38,7 @@ export async function POST(req: Request) {
         phone,
       },
     });
+    response.headers.set("Cache-Control", "no-store");
 
     response.cookies.set(
       AUTH_COOKIE_NAME,

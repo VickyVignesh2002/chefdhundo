@@ -41,6 +41,17 @@ type MobileAuthUserProfile = {
   primaryPhoneNumber?: { phoneNumber: string } | null
 }
 
+export function hasFetchedCurrentUserForIdentity(
+  state: Pick<UserSupabaseState, 'lastFetchedIdentityId' | 'isUserLoaded' | 'currentUser'>,
+  identityId: string
+) {
+  return (
+    state.lastFetchedIdentityId === identityId &&
+    state.isUserLoaded &&
+    Boolean(state.currentUser)
+  )
+}
+
 interface UserSupabaseState {
   // State
   currentUser: User | null
@@ -83,7 +94,7 @@ export const useSupabaseUserStore = create<UserSupabaseState>((set, get) => ({
     return deduplicate(`user-${identityId}`, async () => {
       // Prevent multiple concurrent requests for the same user
       const state = get()
-      if (state.isLoading || state.lastFetchedIdentityId === identityId) {
+      if (state.isLoading || hasFetchedCurrentUserForIdentity(state, identityId)) {
         return
       }
     try {
@@ -134,7 +145,7 @@ export const useSupabaseUserStore = create<UserSupabaseState>((set, get) => ({
       const state = get()
 
       // Prevent multiple calls for the same mobile identity ID
-      if (state.lastFetchedIdentityId === identityId && state.isUserLoaded) {
+      if (hasFetchedCurrentUserForIdentity(state, identityId)) {
         return state.currentUser
       }
 
