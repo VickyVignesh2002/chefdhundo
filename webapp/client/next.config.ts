@@ -20,6 +20,10 @@ const cspHeader = [
 ].join('; ');
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: [
+    'localhost',
+    '127.0.0.1',
+  ],
   turbopack: {
     root: __dirname,
   },
