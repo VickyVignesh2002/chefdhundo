@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/server'
 import { updateResume, deleteResume, getUserByIdentityId } from '@/lib/supabase/database'
 import { createSupabaseAdminClient } from '@/lib/supabase/supabase'
-import { ResumeUpdate } from '@/types/supabase'
+import { normalizeResumeUpdateInput } from '@/lib/resumes/form'
 
 type ResumeRouteParams = {
   id?: string | string[]
@@ -55,25 +55,7 @@ export async function PUT(
       )
     }
 
-    // Create update object with only provided fields
-    const updates: ResumeUpdate = {}
-
-    // Map all possible fields that can be updated
-    const updatableFields = [
-      'name', 'phone', 'user_location', 'age_range', 'gender',
-      'city', 'user_state', 'pin_code', 'experience_years', 'experiences',
-      'profession', 'job_role', 'education', 'cuisines', 'languages',
-      'certifications', 'current_ctc', 'expected_ctc', 'notice_period',
-      'training', 'preferred_location', 'joining', 'work_type',
-      'business_type', 'linkedin_profile', 'portfolio_website', 'bio',
-      'passport', 'photo', 'resume_file', 'verified'
-    ]
-
-    updatableFields.forEach(field => {
-      if (body[field] !== undefined) {
-        updates[field as keyof ResumeUpdate] = body[field]
-      }
-    })
+    const updates = normalizeResumeUpdateInput(body)
 
     const result = await updateResume(resumeId, updates)
 

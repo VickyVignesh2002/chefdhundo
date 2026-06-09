@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Edit2, X, Check, Upload, FileText, Loader2, Download, Trash2 } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
+import { normalizeResumeUpdateInput } from '@/lib/resumes/form';
 //import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 // Interface for editable resume data (complete Resume type for editing)
@@ -50,8 +51,6 @@ interface EditableResumeData {
   photo: string;
   resume_file: string;
 }
-
-type ResumeEditableKey = keyof EditableResumeData & keyof Resume;
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -283,38 +282,7 @@ export default function DashboardPage() {
     try {
       setIsUpdating(true);
 
-      // Process the edit values to ensure proper data types
-      const processedUpdates: Partial<Resume> = {};
-
-      const typedEntries = Object.entries(editValues) as Array<[
-        ResumeEditableKey,
-        EditableResumeData[ResumeEditableKey]
-      ]>;
-
-      typedEntries.forEach(([key, value]) => {
-        if (value === undefined) {
-          return;
-        }
-
-        if (key === 'experience_years') {
-          const numericValue =
-            typeof value === 'string'
-              ? Number(value)
-              : typeof value === 'number'
-              ? value
-              : null;
-
-          const sanitizedValue: number | null =
-            typeof numericValue === 'number' && !Number.isNaN(numericValue)
-              ? numericValue
-              : null;
-
-          (processedUpdates as Record<string, number | string | null>)[key] = sanitizedValue;
-          return;
-        }
-
-        (processedUpdates as Record<string, number | string | null>)[key] = value as string | null;
-      });
+      const processedUpdates = normalizeResumeUpdateInput(editValues as Record<string, unknown>);
 
 
       await updateResume(userResume.id, processedUpdates);
@@ -593,7 +561,12 @@ export default function DashboardPage() {
                 {renderField('phone', 'Phone', userResume.phone)}
                 {renderField('age_range', 'Age Range', userResume.age_range, 'select', ['18-25', '26-35', '36-45', '46-55', '55+'])}
                 {renderField('gender', 'Gender', userResume.gender, 'select', ['Male', 'Female', 'Other', 'Prefer not to say'])}
-                {renderField('city', 'City', userResume.city)}
+                {renderField('city', 'Location / City', userResume.city)}
+                {isEditing && (
+                  <p className="-mt-3 mb-4 ml-36 text-xs text-gray-500">
+                    You can replace Metro Cities / Non-Metro Cities with any city or location text.
+                  </p>
+                )}
                 {renderField('user_state', 'State', userResume.user_state)}
                 {renderField('pin_code', 'PIN Code', userResume.pin_code)}
                 {renderField('user_location', 'Current Location/Position', userResume.user_location)}

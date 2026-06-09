@@ -1,18 +1,15 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import Image from 'next/image';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
-
-// TypeScript interface for the resume data
 interface ChefResumeData {
   name: string;
   mobile: string;
   location: string;
-  age?: number;
+  age?: number | string;
   experience: string;
   jobType: string;
   cuisines: string;
@@ -32,264 +29,206 @@ interface ChefResumeData {
 interface ResumeTemplateProps {
   data: ChefResumeData;
   onDownloadPDF?: () => void;
+  isDownloadingPDF?: boolean;
 }
 
-const ResumeTemplate: React.FC<ResumeTemplateProps> = ({ data, onDownloadPDF }) => {
-  // Helper function to format experience years
+const ResumeTemplate: React.FC<ResumeTemplateProps> = ({ data, onDownloadPDF, isDownloadingPDF = false }) => {
   const formatExperienceYears = (years?: number) => {
-    if (!years) return '';
+    if (!years) return 'Not specified';
     if (years === 1) return '1 year';
     return `${years} years`;
   };
 
+  const cuisines = data.cuisines
+    .split(',')
+    .map((cuisine) => cuisine.trim())
+    .filter(Boolean);
 
+  const detailItems = [
+    ['Experience', formatExperienceYears(data.totalExperienceYears)],
+    ['Job Type', data.jobType || 'Not specified'],
+    ['Business Type', data.businessType || 'Not specified'],
+    ['Preferred Location', data.preferredLocation || 'Not specified'],
+    ['Joining', data.joiningType || 'Not specified'],
+    ['Training', data.readyForTraining || 'Not specified'],
+  ];
+
+  const compensationItems = [
+    ['Current Salary', data.currentSalary || 'Not specified'],
+    ['Expected Salary', data.expectedSalary || 'Not specified'],
+  ];
 
   return (
-    <div id="chef-resume" className="max-w-4xl mx-auto bg-white shadow-2xl print:shadow-none print:max-w-none">
-      {/* Header Section - Harvard Style */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-b-4 border-amber-600 p-8 print:bg-white print:border-b-2">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2 tracking-tight">
+    <div id="chef-resume" className="mx-auto max-w-4xl bg-white text-gray-900 shadow-2xl print:shadow-none print:max-w-none">
+      <div className="relative overflow-hidden bg-slate-950 px-8 py-9 text-white print:bg-white print:text-gray-900">
+        <div className="absolute inset-y-0 right-0 w-2/5 bg-[radial-gradient(circle_at_top_right,_rgba(245,158,11,0.45),_transparent_55%)] print:hidden" />
+        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+          <div className="max-w-2xl">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.35em] text-amber-300 print:text-amber-700">
+              ChefDhundo Verified Resume
+            </p>
+            <h1 className="text-4xl font-black tracking-tight sm:text-5xl">
               {data.name}
             </h1>
-            <h2 className="text-2xl font-semibold text-amber-700 mb-3">
-              {data.currentPosition}
-            </h2>
-            <div className="flex flex-wrap gap-4 text-gray-600">
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-                </svg>
-                <span>{data.mobile}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                </svg>
-                <span>{data.location}</span>
-              </div>
+            <p className="mt-3 text-xl font-semibold text-amber-200 print:text-amber-700">
+              {data.currentPosition || 'Chef'}
+            </p>
+            <div className="mt-5 flex flex-wrap gap-3 text-sm text-slate-200 print:text-gray-700">
+              <span className="rounded-full border border-white/15 px-3 py-1 print:border-gray-300">
+                {data.mobile}
+              </span>
+              <span className="rounded-full border border-white/15 px-3 py-1 print:border-gray-300">
+                {data.location}
+              </span>
+              {data.totalExperienceYears ? (
+                <span className="rounded-full border border-white/15 px-3 py-1 print:border-gray-300">
+                  {formatExperienceYears(data.totalExperienceYears)}
+                </span>
+              ) : null}
             </div>
           </div>
-          <div className="w-24 h-24 border-4 border-red-500 bg-black rounded-full flex items-center justify-center print:w-20 print:h-20 transform rotate-12 overflow-hidden">
-            <Image 
-              src="/website/icons/cheflogo.webp" 
-              alt="Chef Logo" 
+          <div className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-3xl border border-white/20 bg-white shadow-xl print:border-gray-200">
+            <Image
+              src="/website/icons/cheflogo.webp"
+              alt="ChefDhundo logo"
               width={64}
               height={64}
-              className="w-16 h-16 print:w-14 print:h-14 object-contain"
+              className="h-16 w-16 object-contain"
             />
           </div>
         </div>
       </div>
 
-      {/* Professional Summary */}
-      <section className="p-8 border-b border-gray-200">
-        <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <div className="w-2 h-2 bg-amber-600 rounded-full"></div>
-          Professional Summary
-        </h3>
-        <p className="text-gray-700 leading-relaxed text-lg">
-          {data.experience}
-        </p>
-      </section>
+      <div className="grid gap-0 md:grid-cols-[1.15fr_0.85fr]">
+        <main className="space-y-8 p-8">
+          <section>
+            <h3 className="mb-3 border-b border-amber-300 pb-2 text-sm font-black uppercase tracking-[0.24em] text-amber-700">
+              Professional Summary
+            </h3>
+            <p className="text-base leading-7 text-gray-700">
+              {data.experience || 'Experienced hospitality professional ready for the right opportunity.'}
+            </p>
+          </section>
 
-      {/* Primary Professional Details */}
-      <section className="p-8 border-b border-gray-200">
-        <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <div className="w-2 h-2 bg-amber-600 rounded-full"></div>
-          Professional Details
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="border-l-4 border-l-amber-600 hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-gray-600 uppercase tracking-wide">Experience</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-lg font-semibold text-gray-900">
-                {formatExperienceYears(data.totalExperienceYears)}
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card className="border-l-4 border-l-amber-600 hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-gray-600 uppercase tracking-wide">Job Type</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Badge variant="secondary" className="bg-amber-100 text-amber-800">
-                {data.jobType}
-              </Badge>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-amber-600 hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-gray-600 uppercase tracking-wide">Business Type</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Badge variant="secondary" className="bg-amber-100 text-amber-800">
-                {data.businessType}
-              </Badge>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-amber-600 hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-gray-600 uppercase tracking-wide">Preferred Location</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-lg font-semibold text-gray-900">{data.preferredLocation}</p>
-            </CardContent>
-          </Card>
-
-          {data.age && (
-            <Card className="border-l-4 border-l-amber-600 hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-gray-600 uppercase tracking-wide">Age</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-lg font-semibold text-gray-900">{data.age} years</p>
-              </CardContent>
-            </Card>
-          )}
-
-          {data.passportNo && (
-            <Card className="border-l-4 border-l-amber-600 hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-gray-600 uppercase tracking-wide">Passport No</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-lg font-semibold text-gray-900 font-mono">{data.passportNo}</p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </section>
-
-      {/* Culinary Expertise */}
-      <section className="p-8 border-b border-gray-200">
-        <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <div className="w-2 h-2 bg-amber-600 rounded-full"></div>
-          Culinary Expertise
-        </h3>
-        <div className="space-y-6">
-          <div>
-            <h4 className="font-semibold text-gray-800 mb-3 text-lg">Specialized Cuisines</h4>
+          <section>
+            <h3 className="mb-4 border-b border-amber-300 pb-2 text-sm font-black uppercase tracking-[0.24em] text-amber-700">
+              Culinary Expertise
+            </h3>
             <div className="flex flex-wrap gap-2">
-              {data.cuisines.split(',').map((cuisine, index) => (
-                <Badge key={index} variant="outline" className="border-amber-300 text-amber-700 px-3 py-1 text-sm">
-                  {cuisine.trim()}
+              {(cuisines.length ? cuisines : ['Cuisine details not specified']).map((cuisine) => (
+                <Badge key={cuisine} variant="outline" className="border-amber-300 bg-amber-50 px-3 py-1 text-amber-800">
+                  {cuisine}
                 </Badge>
               ))}
             </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-semibold text-gray-800 mb-2">Joining Type</h4>
-              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                {data.joiningType}
-              </Badge>
+          </section>
+
+          <section>
+            <h3 className="mb-4 border-b border-amber-300 pb-2 text-sm font-black uppercase tracking-[0.24em] text-amber-700">
+              Compensation
+            </h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {compensationItems.map(([label, value]) => (
+                <div key={label} className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{label}</p>
+                  <p className="mt-1 text-lg font-bold text-gray-900">{value}</p>
+                </div>
+              ))}
             </div>
-            <div>
-              <h4 className="font-semibold text-gray-800 mb-2">Training Readiness</h4>
-              <Badge variant="secondary" className="bg-green-100 text-green-800">
-                {data.readyForTraining}
-              </Badge>
+          </section>
+
+          <section>
+            <h3 className="mb-4 border-b border-amber-300 pb-2 text-sm font-black uppercase tracking-[0.24em] text-amber-700">
+              Notes
+            </h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-gray-200 p-4">
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Candidate Consent</p>
+                <p className="mt-1 font-semibold text-gray-900">
+                  {data.candidateConsent ? 'Consent provided' : 'Consent not provided'}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-gray-200 p-4">
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Probation</p>
+                <p className="mt-1 font-semibold text-gray-900">
+                  {data.probationPeriod ? 'Required' : 'Not required'}
+                </p>
+              </div>
+              {data.age ? (
+                <div className="rounded-2xl border border-gray-200 p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Age Range</p>
+                  <p className="mt-1 font-semibold text-gray-900">{data.age}</p>
+                </div>
+              ) : null}
             </div>
-          </div>
-        </div>
-      </section>
+          </section>
+        </main>
 
-      {/* Additional Information */}
-      <section className="p-8 border-b border-gray-200">
-        <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <div className="w-2 h-2 bg-amber-600 rounded-full"></div>
-          Additional Information
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h4 className="font-semibold text-gray-800 mb-2">Probation Period</h4>
-            <Badge variant={data.probationPeriod ? "default" : "secondary"}>
-              {data.probationPeriod ? "Required" : "Not Required"}
-            </Badge>
-          </div>
-          
-          <div>
-            <h4 className="font-semibold text-gray-800 mb-2">Candidate Consent</h4>
-            <Badge variant={data.candidateConsent ? "default" : "secondary"}>
-              {data.candidateConsent ? "Consented" : "Not Consented"}
-            </Badge>
-          </div>
-        </div>
-      </section>
+        <aside className="space-y-6 border-l border-gray-100 bg-gray-50 p-8 print:bg-white">
+          <section>
+            <h3 className="mb-4 text-sm font-black uppercase tracking-[0.24em] text-gray-500">
+              Profile Details
+            </h3>
+            <div className="space-y-3">
+              {detailItems.map(([label, value]) => (
+                <div key={label} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100 print:ring-gray-200">
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{label}</p>
+                  <p className="mt-1 font-semibold text-gray-900">{value}</p>
+                </div>
+              ))}
+              {data.passportNo ? (
+                <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100 print:ring-gray-200">
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Passport No</p>
+                  <p className="mt-1 font-mono font-semibold text-gray-900">{data.passportNo}</p>
+                </div>
+              ) : null}
+            </div>
+          </section>
 
-      {/* Salary & Compensation Details */}
-      <section className="p-8 border-b border-gray-200">
-        <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <div className="w-2 h-2 bg-amber-600 rounded-full"></div>
-          Salary & Compensation
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="border-l-4 border-l-amber-600 hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-gray-600 uppercase tracking-wide">Current Salary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-lg font-semibold text-gray-900">{data.currentSalary}</p>
-            </CardContent>
-          </Card>
+          <section className="rounded-3xl bg-slate-950 p-5 text-white print:border print:border-gray-200 print:bg-white print:text-gray-900">
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-300 print:text-amber-700">
+              Contact
+            </p>
+            <p className="mt-3 text-lg font-bold">{data.mobile}</p>
+            <p className="mt-1 text-sm text-slate-300 print:text-gray-600">{data.location}</p>
+          </section>
+        </aside>
+      </div>
 
-          <Card className="border-l-4 border-l-amber-600 hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-gray-600 uppercase tracking-wide">Expected Salary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-lg font-semibold text-gray-900">{data.expectedSalary}</p>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
+      <footer className="border-t border-gray-200 bg-white p-6 text-center text-xs text-gray-500">
+        <p className="font-semibold text-gray-700">Generated by ChefDhundo</p>
+        <p className="mt-1">Professional chef recruitment profile. References available upon request.</p>
 
-      {/* Footer */}
-      <div className="p-8 bg-gray-50 print:bg-white">
-        <div className="text-center text-gray-600">
-          <p className="text-sm">
-            This resume was generated using ChefDhundo - Professional Chef Recruitment Platform
-          </p>
-          <p className="text-xs mt-1">
-            Available for immediate placement • References available upon request
-          </p>
-        </div>
-        
-        {/* Download PDF Button - Hidden in print */}
         {onDownloadPDF && (
-          <div className="mt-6 text-center print:hidden">
-            <Button 
-              disabled
-              className="bg-gray-400 cursor-not-allowed text-white px-8 py-3 rounded-lg shadow-lg transition-all duration-200 opacity-75"
+          <div className="mt-5 print:hidden">
+            <Button
+              type="button"
+              onClick={onDownloadPDF}
+              disabled={isDownloadingPDF}
+              className="bg-amber-600 px-8 py-3 font-bold text-white shadow-lg hover:bg-amber-700 disabled:bg-amber-400"
             >
-              <svg className="w-5 h-5 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Generate Resume - Coming Soon
+              {isDownloadingPDF ? 'Preparing PDF...' : 'Download PDF'}
             </Button>
           </div>
         )}
-      </div>
+      </footer>
 
-      {/* Print Styles */}
       <style jsx>{`
         @media print {
+          #chef-resume {
+            width: 210mm;
+            min-height: 297mm;
+          }
           .print\\:hidden { display: none !important; }
           .print\\:bg-white { background-color: white !important; }
+          .print\\:text-gray-900 { color: #111827 !important; }
           .print\\:shadow-none { box-shadow: none !important; }
           .print\\:max-w-none { max-width: none !important; }
-          .print\\:border-b-2 { border-bottom-width: 2px !important; }
-          .print\\:w-20 { width: 5rem !important; }
-          .print\\:h-20 { height: 5rem !important; }
-          .print\\:text-xl { font-size: 1.25rem !important; }
+          .print\\:border { border-width: 1px !important; }
+          .print\\:border-gray-200 { border-color: #e5e7eb !important; }
+          .print\\:ring-gray-200 { --tw-ring-color: #e5e7eb !important; }
+          .print\\:text-amber-700 { color: #b45309 !important; }
+          .print\\:text-gray-600 { color: #4b5563 !important; }
         }
       `}</style>
     </div>
