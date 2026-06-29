@@ -19,6 +19,16 @@ function rateLimitMessage(reason: string | null) {
   return "Please wait before requesting another OTP.";
 }
 
+function isOtpDependencyError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes("OTP_SECRET is missing") ||
+    message.includes("OTP storage unavailable") ||
+    message.includes("OTP status update failed") ||
+    message.includes("TypeError: fetch failed")
+  );
+}
+
 export async function POST(req: Request) {
   let phone: string | null = null;
   let otpId: string | null = null;
@@ -93,6 +103,20 @@ export async function POST(req: Request) {
   } catch (error) {
     if (phone && otpId) {
       await invalidateOtp(otpId, phone).catch(() => undefined);
+    }
+    if (isOtpDependencyError(error)) {
+      console.error(
+        "POST /api/auth/request-otp dependency failure:",
+        error instanceof Error ? error.message : String(error)
+      );
+      return NextResponse.json(
+        {
+          success: false,
+          error: "OTP service is temporarily unavailable. Please try again later.",
+          code: "OTP_SERVICE_UNAVAILABLE",
+        },
+        { status: 503 }
+      );
     }
     console.error(
       "POST /api/auth/request-otp failed:",

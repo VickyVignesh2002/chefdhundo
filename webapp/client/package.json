@@ -9,7 +9,8 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "test": "vitest run",
-    "test:otp": "node ./scripts/test-otp-flow.mjs"
+    "test:otp": "node ./scripts/test-otp-flow.mjs",
+    "test:otp:diagnose": "node ./scripts/test-otp-flow.mjs --diagnose-only"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",

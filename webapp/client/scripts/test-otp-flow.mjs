@@ -20,14 +20,26 @@ function loadLocalEnv() {
 
 loadLocalEnv();
 
-const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
+const args = process.argv.slice(2);
+const flags = new Set(args.filter((arg) => arg.startsWith("--")));
+const getFlagValue = (name) => {
+  const prefix = `${name}=`;
+  const match = args.find((arg) => arg.startsWith(prefix));
+  return match ? match.slice(prefix.length) : null;
+};
+
+const BASE_URL = getFlagValue("--base-url") || process.env.BASE_URL || "http://localhost:3000";
+const diagnoseOnly = flags.has("--diagnose-only");
 const TEXTBEE_API_KEY = process.env.TEXTBEE_API_KEY;
 const TEXTBEE_DEVICE_ID = process.env.TEXTBEE_DEVICE_ID;
 const SUPABASE_PROJECT_URL = process.env.SUPABASE_PROJECT_URL;
 const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE;
+const REQUIRED_OTP_COLUMNS =
+  "id,phone,otp_hash,expires_at,attempts,created_at,request_ip_hash,provider_status,provider_message_id,provider_error,accepted_at,verified_at";
 
-const phones = process.argv.slice(2).length
-  ? process.argv.slice(2)
+const phoneArgs = args.filter((arg) => !arg.startsWith("--"));
+const phones = phoneArgs.length
+  ? phoneArgs
   : ["9360804740", "7305250054"];
 
 function normalizeIndianPhone(phone) {
@@ -53,12 +65,43 @@ async function checkSupabaseOtpTable() {
   const supabase = createClient(SUPABASE_PROJECT_URL, SUPABASE_SERVICE_ROLE, {
     auth: { persistSession: false },
   });
-  const result = await supabase.from("phone_otps").select("id").limit(1);
+  const result = await supabase.from("phone_otps").select(REQUIRED_OTP_COLUMNS).limit(1);
 
   if (result.error) {
     return { ok: false, reason: result.error.message };
   }
-  return { ok: true, reason: "phone_otps table exists" };
+  return { ok: true, reason: "phone_otps table and required OTP columns exist" };
+}
+
+async function checkTextBeeDevice() {
+  if (!TEXTBEE_API_KEY || !TEXTBEE_DEVICE_ID) {
+    return { ok: false, reason: "Missing TEXTBEE_API_KEY or TEXTBEE_DEVICE_ID env" };
+  }
+
+  const res = await fetch("https://api.textbee.dev/api/v1/gateway/devices", {
+    headers: { "x-api-key": TEXTBEE_API_KEY },
+  });
+  if (!res.ok) {
+    return { ok: false, reason: `TextBee devices API failed (${res.status})` };
+  }
+
+  const body = await res.json();
+  const device = Array.isArray(body?.data)
+    ? body.data.find((item) => item?._id === TEXTBEE_DEVICE_ID)
+    : null;
+  if (!device) return { ok: false, reason: "Configured TextBee device was not found" };
+
+  return {
+    ok: Boolean(device.enabled),
+    reason: device.enabled ? "TextBee device is enabled" : "TextBee device is disabled",
+    device: {
+      name: device.name || null,
+      appVersionName: device.appVersionName || null,
+      fcmTokenUpdatedAt: device.fcmTokenUpdatedAt || null,
+      heartbeatEnabled: Boolean(device.heartbeatEnabled),
+      sentSMSCount: device.sentSMSCount ?? null,
+    },
+  };
 }
 
 async function fetchLatestOtpMessage(recipient) {
@@ -199,14 +242,25 @@ async function main() {
     `Supabase phone_otps: ${otpTableStatus.ok ? "OK" : "MISSING/ERROR"} - ${otpTableStatus.reason}`
   );
 
+  const textBeeStatus = await checkTextBeeDevice();
+  console.log(
+    `TextBee device: ${textBeeStatus.ok ? "OK" : "ERROR"} - ${textBeeStatus.reason}`
+  );
+
+  if (diagnoseOnly) {
+    console.log(JSON.stringify({ otpTableStatus, textBeeStatus }, null, 2));
+    if (!otpTableStatus.ok || !textBeeStatus.ok) process.exitCode = 1;
+    return;
+  }
+
   const results = [];
   for (const phone of phones) {
     results.push(await runForPhone(phone));
   }
 
-  console.log(JSON.stringify({ otpTableStatus, results }, null, 2));
+  console.log(JSON.stringify({ otpTableStatus, textBeeStatus, results }, null, 2));
 
-  const failed = results.some((result) => !result.ok);
+  const failed = !otpTableStatus.ok || !textBeeStatus.ok || results.some((result) => !result.ok);
   if (failed) {
     process.exitCode = 1;
   }
